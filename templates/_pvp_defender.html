@@ -3,6 +3,7 @@
   Renders:
    - reusable scam popup markup (hidden until an effect fires)
    - an <aside> distraction banner
+   - screen glitch overlay
    - the polling script that pings /effects and shows the appropriate UI
 #}
 <style>
@@ -37,14 +38,85 @@
     cursor: pointer;
 }
 .pvp-banner-close:hover { background: rgba(255,255,255,0.1); }
+
+/* Screen glitch overlay */
+.pvp-glitch-overlay {
+    position: fixed; inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    display: none;
+}
+.pvp-glitch-overlay.active {
+    display: block;
+    animation: pvp-glitch 2.5s ease-out forwards;
+}
+@keyframes pvp-glitch {
+    0%   { background: transparent; }
+    2%   { background: rgba(255,0,0,0.08); transform: translate(-3px, 2px); }
+    4%   { background: rgba(0,255,255,0.06); transform: translate(3px, -2px); }
+    6%   { background: transparent; transform: none; }
+    10%  { background: rgba(255,0,0,0.05); transform: translate(0, 3px) skewX(-1deg); }
+    12%  { transform: none; background: transparent; }
+    20%  { background: rgba(255,255,255,0.03); }
+    22%  { background: transparent; transform: translate(2px, 0); }
+    24%  { transform: none; }
+    30%  { background: linear-gradient(transparent 49.5%, rgba(0,255,0,0.06) 49.5%, rgba(0,255,0,0.06) 50.5%, transparent 50.5%); }
+    32%  { background: transparent; }
+    50%  { background: transparent; }
+    52%  { background: rgba(255,0,0,0.04); transform: translate(-2px, 1px); }
+    54%  { background: transparent; transform: none; }
+    100% { background: transparent; }
+}
+.pvp-glitch-overlay.active ~ * {
+    animation: pvp-shake 0.15s ease-in-out 0s 8;
+}
+@keyframes pvp-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px) translateY(1px); }
+    75% { transform: translateX(4px) translateY(-1px); }
+}
+.pvp-glitch-scanlines {
+    position: fixed; inset: 0;
+    z-index: 10000;
+    pointer-events: none;
+    display: none;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.06) 2px,
+        rgba(0,0,0,0.06) 4px
+    );
+}
+.pvp-glitch-overlay.active + .pvp-glitch-scanlines { display: block; }
+
+/* Injected email pulse */
+.pvp-injected-email {
+    animation: pvp-email-flash 0.6s ease-out;
+}
+@keyframes pvp-email-flash {
+    0% { background: rgba(248, 113, 113, 0.15); }
+    100% { background: transparent; }
+}
+
+/* URL spoof flash */
+.addr-bar.pvp-spoofed input {
+    color: var(--text) !important;
+    background: rgba(248, 113, 113, 0.08);
+    transition: background 0.3s;
+}
 </style>
 
 <!-- Distraction banner -->
 <div class="pvp-banner" id="pvp-banner">
     <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h0"/></svg>
-    <span id="pvp-banner-text">URGENT: Unauthorized login attempt detected on your account. Click here to secure it immediately.</span>
-    <span class="pvp-banner-close" onclick="document.getElementById('pvp-banner').classList.remove('show')">✕</span>
+    <a href="/lose?reason=banner_scam" id="pvp-banner-text" style="color: inherit; text-decoration: none; cursor: pointer;">URGENT: Unauthorized login attempt detected on your account. <u>Click here</u> to secure it immediately.</a>
+    <span class="pvp-banner-close" onclick="document.getElementById('pvp-banner').classList.remove('show')">&#10005;</span>
 </div>
+
+<!-- Screen glitch layers -->
+<div class="pvp-glitch-overlay" id="pvp-glitch"></div>
+<div class="pvp-glitch-scanlines" id="pvp-scanlines"></div>
 
 <!-- Injected attack popup host -->
 <div id="pvp-popup-host"></div>
@@ -54,12 +126,13 @@
     const CODE = "{{ match_code }}";
     const CURRENT_STAGE = "{{ page_stage|default('start') }}";
 
-    // Report current stage once per page load (helps attacker see transitions promptly)
     fetch(`/api/match/${CODE}/stage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stage: CURRENT_STAGE })
     });
+
+    /* ========== Popup HTML generators ========== */
 
     function lotteryHTML() {
         return `
@@ -113,9 +186,67 @@
         </div>`;
     }
 
+    function sessionTimeoutHTML() {
+        return `
+        <div class="modal-scrim" id="pvp-session-timeout">
+          <div class="modal scam-modal">
+            <div class="modal-head">
+              <div class="scam-modal-title">
+                <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                Session expiring
+              </div>
+            </div>
+            <div class="modal-body">
+              <p class="scam-text" style="color: var(--text);">Your session will expire in <strong id="pvp-timeout-counter" style="color: var(--danger); font-variant-numeric: tabular-nums;">30</strong> seconds due to inactivity. Re-enter your password to stay signed in.</p>
+              <div class="scam-form">
+                <input class="bank-input" type="password" placeholder="Password">
+              </div>
+              <div class="scam-urgent">
+                <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h0"/></svg>
+                You will be signed out automatically
+              </div>
+            </div>
+            <div class="modal-foot">
+              <button class="btn btn-ghost" data-pvp-dismiss="session-timeout">Dismiss</button>
+              <a href="/attack_clicked?type=session_timeout" class="btn btn-danger">Confirm password</a>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function fake2faHTML() {
+        return `
+        <div class="modal-scrim" id="pvp-fake-2fa">
+          <div class="modal scam-modal">
+            <div class="modal-head">
+              <div class="scam-modal-title">
+                <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+                Two-factor verification required
+              </div>
+            </div>
+            <div class="modal-body">
+              <p class="scam-text" style="color: var(--text);">For your protection, we need to verify your identity. Enter your phone number and the code we just sent.</p>
+              <div class="scam-form">
+                <input class="bank-input" placeholder="Phone number — (555) 123-4567">
+                <input class="bank-input" placeholder="6-digit verification code">
+              </div>
+              <div class="scam-urgent">
+                <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                Code expires in 2 minutes
+              </div>
+            </div>
+            <div class="modal-foot">
+              <button class="btn btn-ghost" data-pvp-dismiss="fake-2fa">Cancel</button>
+              <a href="/attack_clicked?type=fake_2fa" class="btn btn-danger">Verify</a>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    /* ========== Effect handlers ========== */
+
     function showPopup(html, key) {
         const host = document.getElementById('pvp-popup-host');
-        // Avoid duplicate concurrent popups of same kind
         if (host.querySelector(`#pvp-${key}`)) return;
         const wrap = document.createElement('div');
         wrap.innerHTML = html;
@@ -136,6 +267,74 @@
         setTimeout(() => b.classList.remove('show'), 7000);
     }
 
+    let _timeoutInterval = null;
+    function startTimeoutCounter() {
+        const el = document.getElementById('pvp-timeout-counter');
+        if (!el) return;
+        let sec = 30;
+        clearInterval(_timeoutInterval);
+        _timeoutInterval = setInterval(() => {
+            sec--;
+            if (el) el.textContent = sec;
+            if (sec <= 0) clearInterval(_timeoutInterval);
+        }, 1000);
+    }
+
+    function triggerGlitch() {
+        const overlay = document.getElementById('pvp-glitch');
+        overlay.classList.remove('active');
+        void overlay.offsetWidth;
+        overlay.classList.add('active');
+        setTimeout(() => overlay.classList.remove('active'), 2600);
+    }
+
+    function injectEmail() {
+        const list = document.querySelector('.inbox-list');
+        if (!list) return;
+        const row = document.createElement('div');
+        row.className = 'mail-row pvp-injected-email';
+        row.dataset.emailId = 'pvp-injected';
+        row.dataset.isPhishing = 'true';
+        row.dataset.link = '/attack_clicked?type=injected_email';
+        row.dataset.linkPreview = 'http://bankofsecure-alert.com/secure';
+        row.setAttribute('onmouseenter', 'showPreview(this)');
+        row.setAttribute('onmouseleave', 'hidePreview()');
+        row.setAttribute('onclick', 'openMail(this)');
+        row.innerHTML = `
+            <div class="mail-sender">
+                <span class="mail-sender-name">Bank of Secure Security</span>
+                <span class="mail-sender-addr">no-reply@bankofsecure-alert.com</span>
+            </div>
+            <div class="mail-body">
+                <div class="mail-subject">Action Required: Confirm recent sign-in</div>
+                <div class="mail-snippet">We noticed a sign-in from a new device. If this wasn't you, secure your account now.</div>
+            </div>
+            <div class="mail-date">Just now</div>`;
+        list.insertBefore(row, list.firstChild);
+    }
+
+    function spoofUrlBar() {
+        const input = document.getElementById('url-input');
+        const bar = document.getElementById('addr-bar');
+        if (!input || !bar) return;
+        const real = input.value;
+        const spoofs = [
+            'https://www.bankofsecure-login.com/auth',
+            'https://www.bank0fsecure.com/signin',
+            'https://www.bankofsecvre.com/portal',
+            'https://www.bankof-secure.com/dashboard',
+        ];
+        const fake = spoofs[Math.floor(Math.random() * spoofs.length)];
+        input.value = fake;
+        bar.classList.add('pvp-spoofed');
+        setTimeout(() => {
+            input.value = real;
+            bar.classList.remove('pvp-spoofed');
+        }, 3500);
+    }
+
+    /* ========== Polling ========== */
+
     async function poll() {
         try {
             const r = await fetch(`/api/match/${CODE}/effects`);
@@ -146,9 +345,19 @@
                 return;
             }
             for (const eff of (data.effects || [])) {
-                if (eff.type === 'lottery_popup') showPopup(lotteryHTML(), 'lottery');
-                else if (eff.type === 'verify_popup') showPopup(verifyHTML(), 'verify');
-                else if (eff.type === 'distraction_banner') showBanner();
+                switch (eff.type) {
+                    case 'lottery_popup':      showPopup(lotteryHTML(), 'lottery'); break;
+                    case 'verify_popup':       showPopup(verifyHTML(), 'verify'); break;
+                    case 'fake_2fa':           showPopup(fake2faHTML(), 'fake-2fa'); break;
+                    case 'distraction_banner': showBanner(); break;
+                    case 'session_timeout':
+                        showPopup(sessionTimeoutHTML(), 'session-timeout');
+                        setTimeout(startTimeoutCounter, 50);
+                        break;
+                    case 'screen_glitch':      triggerGlitch(); break;
+                    case 'fake_email':         injectEmail(); break;
+                    case 'url_spoof':          spoofUrlBar(); break;
+                }
             }
         } catch(e) {}
     }

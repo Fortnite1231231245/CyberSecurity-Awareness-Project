@@ -35,7 +35,12 @@ def _db_url():
 ATTACK_EFFECTS = {
     'lottery_popup':      {'cooldown': 25, 'stages': {'dashboard'}, 'label': 'Lottery scam',       'desc': 'Fake $1M prize popup. Only works while defender is on the dashboard.'},
     'verify_popup':       {'cooldown': 25, 'stages': {'dashboard'}, 'label': 'Verification scam',  'desc': 'Fake SSN/card verification popup. Dashboard only.'},
+    'fake_2fa':           {'cooldown': 30, 'stages': {'dashboard'}, 'label': 'Fake 2FA prompt',    'desc': 'Fake authenticator popup asks for phone number and code. Dashboard only.'},
     'distraction_banner': {'cooldown': 15, 'stages': None,          'label': 'Urgent banner',       'desc': 'Red banner across the top of the defender window. Any stage.'},
+    'session_timeout':    {'cooldown': 30, 'stages': None,          'label': 'Session timeout',     'desc': 'Fake "session expiring" popup that asks for password. Any stage.'},
+    'screen_glitch':      {'cooldown': 12, 'stages': None,          'label': 'Screen glitch',       'desc': 'Brief visual distortion — screen shakes and flickers. Any stage.'},
+    'fake_email':         {'cooldown': 45, 'stages': {'email'},     'label': 'Inject email',        'desc': 'Slip a convincing phishing email into the inbox. Only while defender reads mail.'},
+    'url_spoof':          {'cooldown': 20, 'stages': {'browser'},   'label': 'URL bar spoof',       'desc': 'Flash a typosquatted URL in the address bar. Only on the browser page.'},
 }
 
 # ============== DATABASE HELPERS ==============
@@ -537,7 +542,16 @@ def attack_clicked():
     elif attack_type == 'verify':
         log_action('clicked_verify_scam', 'submitted info to fake verification', -30)
         return redirect(url_for('lose', reason='verify_scam'))
-    
+    elif attack_type == 'session_timeout':
+        log_action('clicked_session_timeout', 'entered password into fake timeout prompt', -30)
+        return redirect(url_for('lose', reason='session_timeout_scam'))
+    elif attack_type == 'fake_2fa':
+        log_action('clicked_fake_2fa', 'submitted phone/code to fake 2FA prompt', -30)
+        return redirect(url_for('lose', reason='fake_2fa_scam'))
+    elif attack_type == 'injected_email':
+        log_action('clicked_injected_email', 'clicked link in attacker-injected phishing email', -30)
+        return redirect(url_for('lose', reason='injected_email'))
+
     return redirect(url_for('dashboard'))
 
 @app.route('/popup_closed')
@@ -689,6 +703,47 @@ def lose():
                 'Legitimate banks use secure, separate verification',
                 'Creating artificial urgency',
                 'Requesting sensitive data in popup form'
+            ]
+        },
+        'banner_scam': {
+            'title': 'Social Engineering - Fake Security Banner',
+            'details': 'A fake urgent banner claimed your account was compromised and urged you to click immediately. Real banks never display urgent warnings as website banners asking you to click.',
+            'red_flags': [
+                'Urgent language designed to cause panic',
+                'Vague threat: "unauthorized login attempt" with no details',
+                'Asking you to click a link to "secure" your account',
+                'Legitimate security alerts come via email or in-app notifications, not browser banners',
+                'Real alerts provide specifics (time, location) — this one gave none'
+            ]
+        },
+        'session_timeout_scam': {
+            'title': 'Social Engineering - Fake Session Timeout',
+            'details': 'A fake popup warned your session was expiring and asked you to re-enter your password. Real session timeouts redirect you to the login page — they never ask for your password inside a popup.',
+            'red_flags': [
+                'Countdown timer creating artificial urgency',
+                'Password field inside a popup overlay, not the real login page',
+                'Banks handle expired sessions with a redirect, not a popup',
+                'The popup appeared unprompted while you were actively using the site'
+            ]
+        },
+        'fake_2fa_scam': {
+            'title': 'Social Engineering - Fake Two-Factor Authentication',
+            'details': 'A fake 2FA prompt asked for your phone number and a verification code. Real 2FA is initiated by YOU during login, not by the bank mid-session via a popup.',
+            'red_flags': [
+                'Unsolicited 2FA request while already logged in',
+                'Asking for phone number — your bank already has it on file',
+                'Real 2FA sends YOU a code; it never asks you to provide one unprompted',
+                'Popup appeared mid-session, not during login'
+            ]
+        },
+        'injected_email': {
+            'title': 'Phishing Email - Injected Message',
+            'details': 'An attacker slipped a convincing phishing email into your inbox. It looked official but the sender domain was slightly wrong.',
+            'red_flags': [
+                'Email appeared suddenly while you were browsing your inbox',
+                'Sender domain had a subtle typo: "bankofsecure-alert.com"',
+                'Urgent subject line pressuring immediate action',
+                'Link destination did not match the real bank domain'
             ]
         }
     }
