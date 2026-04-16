@@ -828,8 +828,52 @@ def init_db():
 @app.before_request
 def _ensure_db_init():
     global _db_initialized
-    if not _db_initialized:
-        init_db()
+    if _db_initialized:
+        return
+    if request.path == '/_health':
+        return
+    init_db()
+
+@app.route('/_health')
+def _health():
+    import traceback
+    env_present = {k: bool(os.environ.get(k)) for k in (
+        'DATABASE_URL', 'POSTGRES_URL', 'POSTGRES_PRISMA_URL',
+        'DATABASE_URL_UNPOOLED', 'POSTGRES_URL_NON_POOLING',
+        'SECRET_KEY', 'FLASK_SECRET_KEY',
+    )}
+    try:
+        url = _db_url()
+    except Exception as e:
+        return jsonify({'ok': False, 'stage': 'env', 'env_present': env_present, 'error': str(e)}), 500
+    host = 'unknown'
+    try:
+        host = url.split('@', 1)[1].split('/', 1)[0].split(':')[0]
+    except Exception:
+        pass
+    try:
+        with psycopg.connect(url, autocommit=True, connect_timeout=5) as conn:
+            with conn.cursor() as cur:
+                cur.execute('SELECT 1')
+                row = cur.fetchone()
+        return jsonify({
+            'ok': True,
+            'stage': 'connected',
+            'env_present': env_present,
+            'db_host': host,
+            'db_initialized_flag': _db_initialized,
+            'select_1': row[0] if row else None,
+        })
+    except Exception as e:
+        return jsonify({
+            'ok': False,
+            'stage': 'connect',
+            'env_present': env_present,
+            'db_host': host,
+            'error_type': type(e).__name__,
+            'error': str(e),
+            'trace_tail': traceback.format_exc().splitlines()[-15:],
+        }), 500
 
 # ============== PvP ROUTES ==============
 
