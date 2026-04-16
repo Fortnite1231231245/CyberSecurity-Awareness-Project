@@ -71,14 +71,14 @@
 
     // Timer (persisted via sessionStorage)
     var stored = sessionStorage.getItem('timeLeft');
-    var timeLeft = stored !== null ? parseInt(stored) : 600;
+    var timeLeft = stored !== null ? parseInt(stored) : 180;
     var tEl = document.getElementById('menu-timer');
     var chip = document.getElementById('menu-timer-chip');
     function tick(){
         var m = Math.floor(timeLeft / 60);
         var s = timeLeft % 60;
         if (tEl) tEl.textContent = m + ':' + (s<10?'0':'') + s;
-        if (timeLeft <= 120 && chip) chip.classList.add('warn');
+        if (timeLeft <= 60 && chip) chip.classList.add('warn');
         if (timeLeft > 0) { timeLeft--; sessionStorage.setItem('timeLeft', timeLeft); }
     }
     tick();

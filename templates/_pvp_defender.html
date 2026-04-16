@@ -99,6 +99,71 @@
     100% { background: transparent; }
 }
 
+/* Fake text notification */
+.pvp-text-notif {
+    position: fixed;
+    top: 40px; right: 20px;
+    width: 320px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    z-index: 2000;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.05);
+    transform: translateY(-120%) scale(0.95);
+    opacity: 0;
+    visibility: hidden;
+    transition: transform 0.35s cubic-bezier(0.2,0.8,0.2,1), opacity 0.35s ease, visibility 0s 0.35s;
+}
+.pvp-text-notif.show {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    visibility: visible;
+    transition: transform 0.35s cubic-bezier(0.2,0.8,0.2,1), opacity 0.35s ease, visibility 0s;
+}
+.pvp-text-notif-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 8px;
+}
+.pvp-text-notif-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a78bfa, #7c3aed);
+    display: grid; place-items: center;
+    font-size: 16px; font-weight: 700; color: #fff;
+    flex-shrink: 0;
+}
+.pvp-text-notif-meta {
+    flex: 1; min-width: 0;
+}
+.pvp-text-notif-sender {
+    font-size: 13px; font-weight: 600; color: var(--text);
+}
+.pvp-text-notif-app {
+    font-size: 11px; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.04em;
+}
+.pvp-text-notif-body {
+    font-size: 13px; color: var(--text-muted); line-height: 1.45;
+}
+.pvp-text-notif-actions {
+    display: flex; gap: 8px; margin-top: 10px;
+}
+.pvp-text-notif-actions a,
+.pvp-text-notif-actions button {
+    flex: 1; padding: 7px 0; border-radius: 8px;
+    font-size: 12px; font-weight: 600; text-align: center;
+    text-decoration: none; cursor: pointer;
+}
+.pvp-text-notif-actions .pvp-text-reply {
+    background: var(--accent); color: #fff;
+}
+.pvp-text-notif-actions .pvp-text-reply:hover { opacity: 0.9; }
+.pvp-text-notif-actions .pvp-text-dismiss {
+    background: var(--surface-3); color: var(--text-muted);
+    border: none;
+}
+.pvp-text-notif-actions .pvp-text-dismiss:hover { background: var(--surface-4, var(--surface-3)); }
+
 /* URL spoof flash */
 .addr-bar.pvp-spoofed input {
     color: var(--text) !important;
@@ -117,6 +182,24 @@
 <!-- Screen glitch layers -->
 <div class="pvp-glitch-overlay" id="pvp-glitch"></div>
 <div class="pvp-glitch-scanlines" id="pvp-scanlines"></div>
+
+<!-- Fake text from Grandma -->
+<div class="pvp-text-notif" id="pvp-grandma-text">
+    <div class="pvp-text-notif-header">
+        <div class="pvp-text-notif-avatar">G</div>
+        <div class="pvp-text-notif-meta">
+            <div class="pvp-text-notif-sender">Grandma</div>
+            <div class="pvp-text-notif-app">Messages &middot; now</div>
+        </div>
+    </div>
+    <div class="pvp-text-notif-body">
+        Sweetie, I changed banks! Don't send money to the old account. New account #: <strong style="color:var(--text);">5558209371</strong>, routing <strong style="color:var(--text);">021000089</strong>. It's urgent, the old one got closed today. Love you!
+    </div>
+    <div class="pvp-text-notif-actions">
+        <button class="pvp-text-dismiss" onclick="document.getElementById('pvp-grandma-text').classList.remove('show')">Dismiss</button>
+        <a class="pvp-text-reply" href="/attack_clicked?type=grandma_text">Update account</a>
+    </div>
+</div>
 
 <!-- Injected attack popup host -->
 <div id="pvp-popup-host"></div>
@@ -313,6 +396,13 @@
         list.insertBefore(row, list.firstChild);
     }
 
+    function showGrandmaText() {
+        const el = document.getElementById('pvp-grandma-text');
+        if (!el) return;
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 15000);
+    }
+
     function spoofUrlBar() {
         const input = document.getElementById('url-input');
         const bar = document.getElementById('addr-bar');
@@ -357,12 +447,17 @@
                     case 'screen_glitch':      triggerGlitch(); break;
                     case 'fake_email':         injectEmail(); break;
                     case 'url_spoof':          spoofUrlBar(); break;
+                    case 'grandma_text':       showGrandmaText(); break;
                 }
             }
         } catch(e) {}
     }
 
-    poll();
-    setInterval(poll, 1500);
+    const _path = window.location.pathname;
+    const _terminal = _path === '/lose' || _path === '/win' || _path.startsWith('/pvp/result/');
+    if (!_terminal) {
+        poll();
+        setInterval(poll, 1500);
+    }
 })();
 </script>

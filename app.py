@@ -41,6 +41,7 @@ ATTACK_EFFECTS = {
     'screen_glitch':      {'cooldown': 12, 'stages': None,          'label': 'Screen glitch',       'desc': 'Brief visual distortion — screen shakes and flickers. Any stage.'},
     'fake_email':         {'cooldown': 45, 'stages': {'email'},     'label': 'Inject email',        'desc': 'Slip a convincing phishing email into the inbox. Only while defender reads mail.'},
     'url_spoof':          {'cooldown': 20, 'stages': {'browser'},   'label': 'URL bar spoof',       'desc': 'Flash a typosquatted URL in the address bar. Only on the browser page.'},
+    'grandma_text':       {'cooldown': 35, 'stages': {'transfer'},  'label': 'Fake text from Grandma', 'desc': 'A fake text from "Grandma" asking to send money to a different account. Transfer page only.'},
 }
 
 # ============== DATABASE HELPERS ==============
@@ -248,27 +249,27 @@ def credits():
     """Team credits page"""
     team = [
         {
-            'name': 'Alex Chen',
-            'role': 'Lead Developer',
-            'contribution': 'Backend architecture, Flask routing, database design, game logic implementation',
+            'name': 'Jahangir Huseynov',
+            'role': 'Lead Designer',
+            'contribution': 'Visual design, UI/UX direction, layout systems, color schemes, responsive design',
             'percent': 25
         },
         {
-            'name': 'Jordan Smith', 
-            'role': 'Full-Stack Developer',
-            'contribution': 'Frontend templates, UI components, JavaScript interactions, some backend work',
+            'name': 'Mark Crawford',
+            'role': 'Scrum Master',
+            'contribution': 'Team coordination, sprint planning, meeting facilitation, project management',
             'percent': 25
         },
         {
-            'name': 'Taylor Williams',
-            'role': 'Backend Developer',
-            'contribution': 'API endpoints, session management, security features, database queries',
+            'name': 'Fallon Ough',
+            'role': 'Senior Developer',
+            'contribution': 'Backend architecture, Flask routing, database design, game logic, PvP system',
             'percent': 25
         },
         {
-            'name': 'Morgan Davis',
-            'role': 'UI/UX Designer',
-            'contribution': 'Visual design, CSS styling, user experience, responsive layouts, color schemes',
+            'name': 'Elijah Gould',
+            'role': 'Senior Developer',
+            'contribution': 'Frontend templates, JavaScript interactions, API endpoints, session management',
             'percent': 25
         }
     ]
@@ -551,6 +552,9 @@ def attack_clicked():
     elif attack_type == 'injected_email':
         log_action('clicked_injected_email', 'clicked link in attacker-injected phishing email', -30)
         return redirect(url_for('lose', reason='injected_email'))
+    elif attack_type == 'grandma_text':
+        log_action('clicked_grandma_text', 'followed fake text from impersonated Grandma', -30)
+        return redirect(url_for('lose', reason='grandma_text_scam'))
 
     return redirect(url_for('dashboard'))
 
@@ -744,6 +748,17 @@ def lose():
                 'Sender domain had a subtle typo: "bankofsecure-alert.com"',
                 'Urgent subject line pressuring immediate action',
                 'Link destination did not match the real bank domain'
+            ]
+        },
+        'grandma_text_scam': {
+            'title': 'Social Engineering - Impersonation via Text',
+            'details': 'A fake text message pretended to be from Grandma, asking you to send money to a different account. Attackers commonly impersonate family members to redirect transfers.',
+            'red_flags': [
+                'Unsolicited text appearing during a bank transaction',
+                'Requested a different account number than the one already on file',
+                'Created urgency: "emergency" or "changed my account"',
+                'Real family members wouldn\'t change payment details via a popup during your session',
+                'Always verify account changes by contacting the person directly through a known channel'
             ]
         }
     }
