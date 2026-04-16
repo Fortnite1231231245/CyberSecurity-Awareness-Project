@@ -70,6 +70,9 @@
                                 <div class="mail-snippet">{{ email.snippet }}</div>
                             </div>
                             <div class="mail-date">{{ email.date }}</div>
+                            <button class="mail-delete" onclick="deleteMail(event, this)" title="Delete email">
+                                <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
                         </div>
                         {% endfor %}
                     </div>
@@ -110,5 +113,20 @@ function hidePreview(){
     text.textContent = 'Hover a message to inspect its link.';
 }
 function openMail(row){ window.location.href = row.dataset.link; }
+function deleteMail(e, btn){
+    e.stopPropagation();
+    var row = btn.closest('.mail-row');
+    var isPhishing = row.dataset.isPhishing === 'true';
+    var emailId = row.dataset.emailId;
+    row.style.transition = 'opacity 0.25s, transform 0.25s';
+    row.style.opacity = '0';
+    row.style.transform = 'translateX(40px)';
+    setTimeout(function(){ row.remove(); }, 260);
+    fetch('/api/delete_email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email_id: emailId, is_phishing: isPhishing })
+    });
+}
 </script>
 {% endblock %}

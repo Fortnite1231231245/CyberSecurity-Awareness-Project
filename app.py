@@ -8,6 +8,7 @@ import psycopg
 from psycopg.rows import dict_row
 import os
 import json
+import random
 import secrets
 import string
 from datetime import datetime, timedelta
@@ -284,7 +285,6 @@ def email():
     update_stage('email')
     log_action('visited_email', 'navigated to email inbox')
     
-    # Email data - mix of legit and phishing
     emails = [
         {
             'id': 1,
@@ -292,7 +292,7 @@ def email():
             'email': 'support@bankofsecure.com',
             'subject': 'Password Reset Instructions',
             'date': 'Jan 20, 2026',
-            'snippet': 'Dear testuser, reset your password here using our secure link.',
+            'snippet': 'Dear Simon, reset your password here using our secure link.',
             'link': '/reset',
             'link_preview': 'https://www.bankofsecure.com/reset',
             'is_phishing': False
@@ -323,9 +323,9 @@ def email():
             'id': 4,
             'sender': 'Bank of Secure',
             'email': 'bankofsecure@gmail.com',
-            'subject': 'Immediate Assistance Required',
+            'subject': 'Simon, Immediate Assistance Required',
             'date': 'Jan 19, 2026',
-            'snippet': 'Dear Account Holder, we need you to verify your information.',
+            'snippet': 'Dear Simon Benson, we need you to verify your information.',
             'link': '/lose?reason=email_phish_gmail',
             'link_preview': 'http://bankofsecure-verify.com/form',
             'is_phishing': True
@@ -356,11 +356,11 @@ def email():
             'id': 7,
             'sender': 'Account Services',
             'email': 'services@bankoofsecure.com',
-            'subject': 'Password Expiring Soon',
+            'subject': 'Password Reset Request for Simon Benson',
             'date': 'Jan 17, 2026',
-            'snippet': 'Your password expires in 24 hours. Update now.',
+            'snippet': 'Hi Simon, we received a password reset request for your account. Click to reset.',
             'link': '/lose?reason=email_phish_double_o',
-            'link_preview': 'http://bankoofsecure.com/update',
+            'link_preview': 'http://bankoofsecure.com/reset',
             'is_phishing': True
         },
         {
@@ -369,7 +369,7 @@ def email():
             'email': 'fraud@bankofsecure.co',
             'subject': 'Unusual Activity Detected',
             'date': 'Jan 17, 2026',
-            'snippet': 'We detected unusual activity. Verify your identity immediately.',
+            'snippet': 'Dear Simon, we detected unusual activity. Verify your identity immediately.',
             'link': '/lose?reason=email_phish_co',
             'link_preview': 'http://bankofsecure.co/verify',
             'is_phishing': True
@@ -378,11 +378,11 @@ def email():
             'id': 9,
             'sender': 'Customer Support',
             'email': 'help@bank-of-secure.com',
-            'subject': 'Action Required: Update Payment Info',
+            'subject': 'Password Reset Confirmation',
             'date': 'Jan 16, 2026',
-            'snippet': 'Your payment method needs updating. Click to update.',
+            'snippet': 'Simon Benson, your password was recently changed. If this wasn\'t you, click here.',
             'link': '/lose?reason=email_phish_hyphen',
-            'link_preview': 'http://bank-of-secure.com/payment',
+            'link_preview': 'http://bank-of-secure.com/reset-confirm',
             'is_phishing': True
         },
         {
@@ -391,13 +391,14 @@ def email():
             'email': 'admin@bankofsecure.org',
             'subject': 'Free Account Upgrade Available',
             'date': 'Jan 15, 2026',
-            'snippet': 'Congratulations! You qualify for a free premium upgrade.',
+            'snippet': 'Congratulations Simon! You qualify for a free premium upgrade.',
             'link': '/lose?reason=email_phish_org',
             'link_preview': 'http://bankofsecure.org/upgrade',
             'is_phishing': True
         }
     ]
-    
+
+    random.shuffle(emails)
     return render_template('email.html', emails=emails)
 
 @app.route('/reset', methods=['GET', 'POST'])
@@ -821,6 +822,18 @@ def log_hover():
     if is_phishing:
         log_action(f'hovered_phishing_email_{email_id}', 'hovered over phishing email', 0)
     
+    return jsonify({'status': 'ok'})
+
+@app.route('/api/delete_email', methods=['POST'])
+def delete_email():
+    """Handle deleting an email from the inbox"""
+    data = request.get_json()
+    email_id = data.get('email_id', 'unknown')
+    is_phishing = data.get('is_phishing', False)
+    if is_phishing:
+        log_action(f'deleted_phishing_email_{email_id}', 'correctly deleted a phishing email', 5)
+    else:
+        log_action(f'deleted_legit_email_{email_id}', 'accidentally deleted a legitimate email', -10)
     return jsonify({'status': 'ok'})
 
 @app.route('/api/time_warning', methods=['POST'])
