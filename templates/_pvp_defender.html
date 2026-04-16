@@ -18,10 +18,14 @@
     z-index: 1500;
     border-bottom: 1px solid rgba(0,0,0,0.4);
     box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-    animation: pvp-slide 280ms cubic-bezier(0.2,0.8,0.2,1);
     transform: translateY(-100%);
+    visibility: hidden;
 }
-.pvp-banner.show { transform: translateY(0); }
+.pvp-banner.show {
+    transform: translateY(0);
+    visibility: visible;
+    animation: pvp-slide 280ms cubic-bezier(0.2,0.8,0.2,1);
+}
 @keyframes pvp-slide { from { transform: translateY(-100%); } to { transform: translateY(0); } }
 .pvp-banner .i { color: #FCA5A5; }
 .pvp-banner-close {
