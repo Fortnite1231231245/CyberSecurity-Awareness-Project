@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Bank of Secure — Transfer{% endblock %}
+
+{% block body %}
+{% set page_stage = 'transfer' %}
+{% set active_app = 'browser' %}
+{% include '_desktop_open.html' %}
+
+<section class="window window--lg">
+    <div class="win-chrome">
+        <div class="win-traffic"><span class="light close"></span><span class="light minimize"></span><span class="light maximize"></span></div>
+        <div class="win-title">Browser</div>
+    </div>
+
+    <div class="browser-tabs">
+        <div class="browser-tab active">
+            <svg class="fav i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+            <span class="title">Bank of Secure — Transfer</span>
+        </div>
+    </div>
+
+    <div class="win-body" style="padding: 0;">
+        <div class="browser-frame">
+            <div class="browser-chrome">
+                <div class="browser-nav">
+                    <button aria-label="Back"><svg class="i i-sm" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+                    <button disabled aria-label="Forward"><svg class="i i-sm" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+                    <button aria-label="Reload"><svg class="i i-sm" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+                </div>
+                <div class="addr-bar-display">
+                    <svg class="i i-sm" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                    <span>https://www.bankofsecure.com/transfer</span>
+                </div>
+            </div>
+
+            <div class="browser-body">
+                <div class="bank">
+                    <div class="bank-header">
+                        <span class="bank-logo">Bank of Secure</span>
+                        <nav class="bank-nav"><span>Welcome, testuser</span><span>Sign out</span></nav>
+                    </div>
+
+                    <div class="bank-dash" style="max-width: 560px; margin: 0 auto; width: 100%;">
+                        <div>
+                            <h1>Transfer funds</h1>
+                            <div class="sub">Send money to an external account.</div>
+                        </div>
+                        {% if error %}
+                        <div class="alert alert-danger">
+                            <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h0"/></svg>
+                            {{ error }}
+                        </div>
+                        {% endif %}
+                        <form method="POST" action="{{ url_for('transfer') }}" id="transfer-form">
+                            <div style="margin-bottom: var(--s-5);">
+                                <div class="bank-section-title">From</div>
+                                <div class="bank-acct">
+                                    <div>
+                                        <div class="bank-acct-name">Everyday Checking</div>
+                                        <div class="bank-acct-num">····4567</div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div class="bank-acct-bal-label">Available</div>
+                                        <div class="bank-acct-bal" style="font-size: 16px;">$1,000.00</div>
+                                    </div>
+                                    <span></span>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: var(--s-5);">
+                                <div class="bank-section-title">To</div>
+                                <label class="bank-label">Recipient</label>
+                                <input class="bank-input" value="Grandma" disabled>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3);">
+                                    <div>
+                                        <label class="bank-label">Account</label>
+                                        <input class="bank-input" value="123456789" disabled>
+                                    </div>
+                                    <div>
+                                        <label class="bank-label">Routing</label>
+                                        <input class="bank-input" value="987654321" disabled>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: var(--s-5);">
+                                <div class="bank-section-title">Amount</div>
+                                <div class="bank-amount-wrap">
+                                    <input class="bank-input" type="number" name="amount" id="amount" placeholder="0.00" min="0" max="1000" step="0.01" required>
+                                </div>
+                                <small style="color: #6B7280;">Send exactly $500 for Grandma's birthday.</small>
+                            </div>
+                            <div class="bank-summary" style="margin-bottom: var(--s-5);">
+                                <div class="row"><span class="label">From</span><span>Checking ····4567</span></div>
+                                <div class="row"><span class="label">To</span><span>Grandma (···6789)</span></div>
+                                <div class="row total"><span>Total</span><span id="summary-amount">$0.00</span></div>
+                            </div>
+                            <button type="submit" class="bank-btn">Confirm transfer</button>
+                        </form>
+                    </div>
+
+                    <div class="bank-footer">
+                        <span>© 2026 Bank of Secure · Member FDIC</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% include '_desktop_close.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('amount').addEventListener('input', function(){
+    var v = parseFloat(this.value) || 0;
+    document.getElementById('summary-amount').textContent = '$' + v.toFixed(2);
+});
+</script>
+{% endblock %}

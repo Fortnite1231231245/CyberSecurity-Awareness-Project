@@ -1,0 +1,73 @@
+{#
+  Opens the desktop shell: <div class="os"> + menubar + <main class="workspace">.
+  Pages then render their <section class="window">...</section> inside and close via _desktop_close.html.
+  Expects: page_stage, active_app ('sentinel'|'mail'|'browser'|'bank'), window_title, game_score.
+#}
+{% set current = page_stage|default('start') %}
+{% set effective = 'login' if current == 'fake_login' else current %}
+{% set steps = [
+    {'id': 'start',     'label': 'Mission briefing'},
+    {'id': 'email',     'label': 'Check inbox'},
+    {'id': 'reset',     'label': 'Reset password'},
+    {'id': 'browser',   'label': 'Navigate to bank'},
+    {'id': 'login',     'label': 'Sign in'},
+    {'id': 'dashboard', 'label': 'Review dashboard'},
+    {'id': 'transfer',  'label': 'Transfer funds'}
+] %}
+{% set step_ids = steps|map(attribute='id')|list %}
+{% set cidx = step_ids.index(effective) if effective in step_ids else 0 %}
+{% set current_label = steps[cidx].label %}
+{% set active_app = active_app|default('sentinel') %}
+{% set score_cls = 'crit' if game_score < 40 else ('warn' if game_score < 70 else '') %}
+
+<div class="os">
+    <!-- Menubar -->
+    <header class="menubar">
+        <div class="menubar-start">
+            <span class="menu-brand">
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7l8-4z"/></svg>
+                Sentinel
+            </span>
+            <span class="menu-item active-app">
+                {% if active_app == 'mail' %}Mail
+                {% elif active_app == 'browser' %}Browser
+                {% elif active_app == 'bank' %}Bank
+                {% else %}Sentinel{% endif %}
+            </span>
+            <span class="menu-item" id="mission-menu-trigger">
+                Mission
+                <div class="menu-pop" id="mission-pop">
+                    <div class="menu-pop-header">
+                        <div class="menu-pop-title">Current step</div>
+                        <div class="menu-pop-sub">{{ '%02d'|format(cidx + 1) }} · {{ current_label }}</div>
+                    </div>
+                    {% for step in steps %}
+                    {% set idx = loop.index0 %}
+                    {% set state = 'done' if idx < cidx else ('active' if idx == cidx else '') %}
+                    <div class="menu-pop-step {{ state }}">
+                        <span class="dot"></span>
+                        <span>{{ step.label }}</span>
+                        <span class="num">{{ '%02d'|format(loop.index) }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </span>
+            <span class="menu-item">View</span>
+            <span class="menu-item">Help</span>
+        </div>
+
+        <div class="menubar-end">
+            <span class="menu-chip score {{ score_cls }}" title="Trust score">
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7l8-4z"/></svg>
+                <span id="menu-score">{{ game_score }}</span>
+            </span>
+            <span class="menu-chip timer" id="menu-timer-chip" title="Time remaining">
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                <span id="menu-timer">10:00</span>
+            </span>
+            <span class="menu-clock" id="menu-clock">--:--</span>
+        </div>
+    </header>
+
+    <!-- Workspace -->
+    <main class="workspace">

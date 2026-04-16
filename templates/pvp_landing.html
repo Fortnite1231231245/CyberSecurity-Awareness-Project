@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Sentinel — Versus{% endblock %}
+
+{% block body %}
+{% set page_stage = 'start' %}
+{% set active_app = 'sentinel' %}
+{% include '_desktop_open.html' %}
+
+<section class="window window--md">
+    <div class="win-chrome">
+        <div class="win-traffic"><span class="light close"></span><span class="light minimize"></span><span class="light maximize"></span></div>
+        <div class="win-title">Sentinel · Versus mode</div>
+    </div>
+    <div class="win-body">
+        <section class="hero" style="padding: var(--s-10) var(--s-8);">
+            <span class="hero-eyebrow"><span class="badge-dot"></span> Two-player</span>
+            <h1 style="font-size: 44px;">Red team vs. blue team.<br><span class="accent">One keyboard each.</span></h1>
+            <p class="hero-lead">Defender runs the mission. Attacker runs the abilities — popups, distractions, injected attacks. First win condition ends the match.</p>
+
+            {% if error %}
+            <div class="alert alert-danger" style="margin-bottom: var(--s-6); max-width: 560px;">
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h0"/></svg>
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-6); max-width: 760px;">
+                <div class="card">
+                    <div class="card-eyebrow">Create room</div>
+                    <h2 class="card-title" style="margin-bottom: var(--s-3);">Host a match</h2>
+                    <p class="t-body" style="margin-bottom: var(--s-5);">Spin up a new room and send the code to your opponent.</p>
+                    <form method="POST" action="{{ url_for('pvp_create') }}" style="display: flex; flex-direction: column; gap: var(--s-3);">
+                        <label class="field-label">Your role</label>
+                        <select name="role" class="input select">
+                            <option value="defender">Defender — complete the mission</option>
+                            <option value="attacker">Attacker — trigger the traps</option>
+                        </select>
+                        <button class="btn btn-primary" type="submit" style="margin-top: var(--s-3);">
+                            Create room
+                            <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                        </button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <div class="card-eyebrow">Join room</div>
+                    <h2 class="card-title" style="margin-bottom: var(--s-3);">Use a code</h2>
+                    <p class="t-body" style="margin-bottom: var(--s-5);">Enter the 6-character code from your opponent. You'll be assigned the open role.</p>
+                    <form method="POST" action="{{ url_for('pvp_join') }}" style="display: flex; flex-direction: column; gap: var(--s-3);">
+                        <label class="field-label" for="code">Room code</label>
+                        <input id="code" name="code" class="input mono" placeholder="ABC234" maxlength="6" autocomplete="off" style="text-transform: uppercase; letter-spacing: 0.2em;" required>
+                        <button class="btn btn-secondary" type="submit" style="margin-top: var(--s-3);">Join match</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="result-actions" style="margin-top: var(--s-10);">
+                <a href="{{ url_for('start') }}" class="btn btn-ghost btn-lg">Back to single-player</a>
+            </div>
+        </section>
+    </div>
+</section>
+
+{% include '_desktop_close.html' %}
+{% endblock %}

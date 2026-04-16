@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Sentinel — Lobby {{ match.room_code }}{% endblock %}
+
+{% block body %}
+{% set page_stage = 'start' %}
+{% set active_app = 'sentinel' %}
+{% include '_desktop_open.html' %}
+
+<section class="window window--sm">
+    <div class="win-chrome">
+        <div class="win-traffic"><span class="light close"></span><span class="light minimize"></span><span class="light maximize"></span></div>
+        <div class="win-title">Sentinel · Lobby</div>
+    </div>
+    <div class="win-body" style="padding: var(--s-10) var(--s-8);">
+        <div class="card-eyebrow">Room</div>
+        <div class="mono" style="font-size: 44px; font-weight: 600; letter-spacing: 0.24em; margin: var(--s-2) 0 var(--s-6);">{{ match.room_code }}</div>
+
+        <p class="t-body" style="margin-bottom: var(--s-6);">
+            You are <strong style="color: var(--text);">{{ 'the defender' if role == 'defender' else 'the attacker' }}</strong>. Share the code with your opponent — they'll join as {{ 'attacker' if role == 'defender' else 'defender' }}.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: var(--s-3); margin-bottom: var(--s-6);">
+            <div class="action-log-row">
+                <div>
+                    <div class="action-log-name">Defender</div>
+                    <div class="action-log-outcome" id="def-status">Waiting to join…</div>
+                </div>
+                <span class="badge" id="def-badge"><span class="badge-dot"></span> pending</span>
+            </div>
+            <div class="action-log-row">
+                <div>
+                    <div class="action-log-name">Attacker</div>
+                    <div class="action-log-outcome" id="atk-status">Waiting to join…</div>
+                </div>
+                <span class="badge" id="atk-badge"><span class="badge-dot"></span> pending</span>
+            </div>
+        </div>
+
+        <button id="start-btn" class="btn btn-primary btn-lg" disabled style="width: 100%;">Waiting for both players…</button>
+
+        <div class="result-actions" style="margin-top: var(--s-6);">
+            <a href="{{ url_for('pvp_landing') }}" class="btn btn-ghost btn-sm">Leave lobby</a>
+        </div>
+    </div>
+</section>
+
+{% include '_desktop_close.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CODE = "{{ match.room_code }}";
+const MY_ROLE = "{{ role }}";
+async function poll() {
+    try {
+        const r = await fetch(`/api/match/${CODE}/state`);
+        if (!r.ok) return;
+        const s = await r.json();
+        const setRow = (key, joined) => {
+            document.getElementById(key + '-status').textContent = joined ? 'Ready' : 'Waiting to join…';
+            const b = document.getElementById(key + '-badge');
+            b.innerHTML = joined ? '<span class="badge-dot" style="background: var(--success)"></span> ready' : '<span class="badge-dot"></span> pending';
+            b.className = 'badge' + (joined ? ' badge-success' : '');
+        };
+        setRow('def', s.defender_joined);
+        setRow('atk', s.attacker_joined);
+        const btn = document.getElementById('start-btn');
+        if (s.defender_joined && s.attacker_joined && s.status === 'waiting') {
+            btn.disabled = false;
+            btn.textContent = 'Start match';
+        }
+        if (s.status === 'active') {
+            window.location.href = MY_ROLE === 'attacker' ? `/attacker/${CODE}` : "{{ url_for('start') }}";
+        }
+        if (s.status === 'finished') {
+            window.location.href = `/pvp/result/${CODE}`;
+        }
+    } catch(e) {}
+}
+document.getElementById('start-btn').addEventListener('click', async () => {
+    const r = await fetch(`/pvp/start/${CODE}`, { method: 'POST' });
+    if (r.ok) poll();
+});
+poll(); setInterval(poll, 1500);
+</script>
+{% endblock %}

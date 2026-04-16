@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Bank of Secure — Sign in{% endblock %}
+
+{% block body %}
+{% set page_stage = page_stage|default('login') %}
+{% set active_app = 'browser' %}
+{% include '_desktop_open.html' %}
+
+<section class="window window--lg">
+    <div class="win-chrome">
+        <div class="win-traffic"><span class="light close"></span><span class="light minimize"></span><span class="light maximize"></span></div>
+        <div class="win-title">Browser</div>
+    </div>
+
+    <div class="browser-tabs">
+        <div class="browser-tab active">
+            <svg class="fav i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+            <span class="title">Bank of Secure — Sign in</span>
+        </div>
+    </div>
+
+    <div class="win-body" style="padding: 0;">
+        <div class="browser-frame">
+            <div class="browser-chrome">
+                <div class="browser-nav">
+                    <button aria-label="Back"><svg class="i i-sm" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+                    <button disabled aria-label="Forward"><svg class="i i-sm" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+                    <button aria-label="Reload"><svg class="i i-sm" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+                </div>
+                <div class="addr-bar-display">
+                    <svg class="i i-sm" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                    <span>https://www.bankofsecure.com/signin</span>
+                </div>
+            </div>
+
+            <div class="browser-body">
+                <div class="bank">
+                    <div class="bank-header">
+                        <span class="bank-logo">Bank of Secure</span>
+                        <nav class="bank-nav"><span>Personal</span><span>Business</span><span>Commercial</span></nav>
+                    </div>
+
+                    <div class="bank-main">
+                        <form method="POST" action="{{ url_for('login') }}" class="bank-card">
+                            <h1>Sign in</h1>
+                            <input type="hidden" name="is_real" value="true">
+                            <label class="bank-label" for="user-id">Username or customer ID</label>
+                            <input class="bank-input" type="text" id="user-id" name="user_id" value="testuser">
+                            <label class="bank-label" for="password">Password</label>
+                            <input class="bank-input" type="password" id="password" name="password" required>
+                            <div class="bank-remember">
+                                <input type="checkbox" id="remember">
+                                <label for="remember">Remember username</label>
+                            </div>
+                            <button type="submit" class="bank-btn">Sign in</button>
+                            <div class="bank-links">
+                                <a href="#">Forgot username?</a>
+                                <a href="#">Forgot password?</a>
+                                <a href="#">Enroll</a>
+                            </div>
+                            <div class="bank-security">
+                                <svg class="i i-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+                                Secure connection verified (HTTPS)
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bank-footer">
+                        <span>© 2026 Bank of Secure · Member FDIC</span>
+                        <span><a href="#">Privacy</a> · <a href="#">Security</a> · <a href="#">Accessibility</a></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% include '_desktop_close.html' %}
+{% endblock %}

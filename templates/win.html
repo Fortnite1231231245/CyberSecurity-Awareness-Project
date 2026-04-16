@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Sentinel — Debrief{% endblock %}
+
+{% block body %}
+{% set page_stage = 'transfer' %}
+{% set active_app = 'sentinel' %}
+{% include '_desktop_open.html' %}
+
+<section class="window window--md">
+    <div class="win-chrome">
+        <div class="win-traffic"><span class="light close"></span><span class="light minimize"></span><span class="light maximize"></span></div>
+        <div class="win-title">Sentinel · Debrief</div>
+    </div>
+    <div class="win-body">
+        <div class="result">
+            <div class="result-hero">
+                <span class="result-badge win">
+                    <svg class="i i-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+                    Mission complete
+                </span>
+                <h1>You transferred $500 without falling for a single attack.</h1>
+                <p class="result-lead">Below is your session record — the decisions that gained or cost you trust points. Review what you noticed, and what you almost missed.</p>
+            </div>
+
+            <div class="score-block">
+                <div>
+                    <span class="score-number">{{ score }}</span>
+                    <span class="score-max">/ 100</span>
+                </div>
+                <div>
+                    <div class="t-caption" style="margin-bottom: 4px;">Trust score</div>
+                    <div class="score-message">
+                        {% if score >= 95 %}Flawless. You read every domain, every popup, every URL with discipline.
+                        {% elif score >= 85 %}Sharp instincts. A few hesitations, but no mistakes that mattered.
+                        {% elif score >= 70 %}Solid. Review the hover log to see where attention slipped.
+                        {% elif score >= 50 %}You made it through, but several attacks got close.
+                        {% else %}You survived by luck more than discipline. Retry the mission.
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head"><div class="card-title">Your path</div></div>
+                <div class="journey">
+                    <div class="journey-item"><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span class="journey-label">Identified the legitimate email</span><span class="journey-meta">Mail</span></div>
+                    <div class="journey-item"><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span class="journey-label">Set a password that resists guessing</span><span class="journey-meta">Reset</span></div>
+                    <div class="journey-item"><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span class="journey-label">Navigated to the real bank URL</span><span class="journey-meta">Browser</span></div>
+                    <div class="journey-item"><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span class="journey-label">Dismissed every phishing popup</span><span class="journey-meta">Dashboard</span></div>
+                    <div class="journey-item"><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span class="journey-label">Completed the transfer</span><span class="journey-meta">Transfer</span></div>
+                </div>
+            </div>
+
+            {% if actions %}
+            <div class="card">
+                <div class="card-head"><div class="card-title">Session log</div><span class="badge">{{ actions|length }} events</span></div>
+                <div class="action-log">
+                    {% for action in actions %}
+                    <div class="action-log-row">
+                        <div>
+                            <div class="action-log-name">{{ action.action }}</div>
+                            <div class="action-log-outcome">{{ action.outcome }}</div>
+                        </div>
+                        {% if action.score_change != 0 %}
+                        <span class="action-log-delta {% if action.score_change < 0 %}neg{% else %}pos{% endif %}">{{ '+' if action.score_change > 0 else '' }}{{ action.score_change }}</span>
+                        {% else %}
+                        <span class="action-log-delta" style="color: var(--text-faint);">—</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card">
+                <div class="card-head"><div class="card-title">Principles you applied</div></div>
+                <div class="tips">
+                    <div class="tip"><h4><svg class="i i-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Read domains character by character</h4><p>Attackers rely on readers skimming. A single substituted character turns the right site into a trap.</p></div>
+                    <div class="tip"><h4><svg class="i i-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Trust the lock, but verify the URL</h4><p>HTTPS proves the connection is encrypted — not that the destination is legitimate.</p></div>
+                    <div class="tip"><h4><svg class="i i-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Popups asking for SSN are never real</h4><p>Banks ask through authenticated flows, not overlay forms that anything can inject.</p></div>
+                    <div class="tip"><h4><svg class="i i-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Urgency is a tell</h4><p>If a message needs you to act in the next 60 seconds, it is almost always trying to bypass your judgment.</p></div>
+                </div>
+            </div>
+
+            <div class="result-actions">
+                <a href="{{ url_for('new_game') }}" class="btn btn-primary btn-lg">Play again</a>
+                <a href="https://consumer.ftc.gov/articles/how-recognize-and-avoid-phishing-scams" target="_blank" rel="noopener" class="btn btn-secondary btn-lg">FTC phishing guide</a>
+                <a href="{{ url_for('credits') }}" class="btn btn-ghost btn-lg">Credits</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% include '_desktop_close.html' %}
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Mail — Inbox{% endblock %}
+
+{% block body %}
+{% set page_stage = 'email' %}
+{% set active_app = 'mail' %}
+{% include '_desktop_open.html' %}
+
+<section class="window window--mail">
+    <div class="win-chrome">
+        <div class="win-traffic"><span class="light close"></span><span class="light minimize"></span><span class="light maximize"></span></div>
+        <div class="win-title">Mail · Inbox</div>
+    </div>
+    <div class="win-body" style="padding: 0;">
+        <div class="mail-app">
+            <aside class="mail-sidebar">
+                <div class="mail-sidebar-label">Mailboxes</div>
+                <div class="mail-sidebar-item active">
+                    <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9 6 9-6"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg>
+                    Inbox
+                    <span class="count">{{ emails|length }}</span>
+                </div>
+                <div class="mail-sidebar-item">
+                    <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                    Sent
+                </div>
+                <div class="mail-sidebar-item">
+                    <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+                    Drafts
+                </div>
+                <div class="mail-sidebar-item">
+                    <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                    Trash
+                </div>
+                <div class="mail-sidebar-label">Smart</div>
+                <div class="mail-sidebar-item">
+                    <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h0"/></svg>
+                    Flagged
+                </div>
+            </aside>
+
+            <div class="mail-main">
+                <div class="mail-toolbar">
+                    <h2>Inbox</h2>
+                    <span class="badge">{{ emails|length }}</span>
+                    <div class="spacer"></div>
+                    <div class="inbox-search">
+                        <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                        Search mail
+                    </div>
+                </div>
+
+                <div class="mail-list-wrap">
+                    <div class="inbox-list">
+                        {% for email in emails %}
+                        <div class="mail-row"
+                             data-email-id="{{ email.id }}"
+                             data-is-phishing="{{ 'true' if email.is_phishing else 'false' }}"
+                             data-link="{{ email.link }}"
+                             data-link-preview="{{ email.link_preview }}"
+                             onmouseenter="showPreview(this)"
+                             onmouseleave="hidePreview()"
+                             onclick="openMail(this)">
+                            <div class="mail-sender">
+                                <span class="mail-sender-name">{{ email.sender }}</span>
+                                <span class="mail-sender-addr">{{ email.email }}</span>
+                            </div>
+                            <div class="mail-body">
+                                <div class="mail-subject">{{ email.subject }}</div>
+                                <div class="mail-snippet">{{ email.snippet }}</div>
+                            </div>
+                            <div class="mail-date">{{ email.date }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="status-bar" id="status-bar">
+                    <span class="indicator"></span>
+                    <span id="status-text">Hover a message to inspect its link.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% include '_desktop_close.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showPreview(row){
+    var bar = document.getElementById('status-bar');
+    var text = document.getElementById('status-text');
+    var phish = row.dataset.isPhishing === 'true';
+    text.textContent = row.dataset.linkPreview;
+    bar.className = 'status-bar ' + (phish ? 'suspicious' : 'safe');
+    if (phish) {
+        fetch('/api/log_hover', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email_id: row.dataset.emailId, is_phishing: true })
+        });
+    }
+}
+function hidePreview(){
+    var bar = document.getElementById('status-bar');
+    var text = document.getElementById('status-text');
+    bar.className = 'status-bar';
+    text.textContent = 'Hover a message to inspect its link.';
+}
+function openMail(row){ window.location.href = row.dataset.link; }
+</script>
+{% endblock %}

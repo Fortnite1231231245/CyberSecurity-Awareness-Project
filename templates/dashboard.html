@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Bank of Secure — Dashboard{% endblock %}
+
+{% block body %}
+{% set page_stage = 'dashboard' %}
+{% set active_app = 'browser' %}
+{% include '_desktop_open.html' %}
+
+<section class="window window--lg">
+    <div class="win-chrome">
+        <div class="win-traffic"><span class="light close"></span><span class="light minimize"></span><span class="light maximize"></span></div>
+        <div class="win-title">Browser</div>
+    </div>
+
+    <div class="browser-tabs">
+        <div class="browser-tab active">
+            <svg class="fav i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+            <span class="title">Bank of Secure — Dashboard</span>
+        </div>
+    </div>
+
+    <div class="win-body" style="padding: 0;">
+        <div class="browser-frame">
+            <div class="browser-chrome">
+                <div class="browser-nav">
+                    <button aria-label="Back"><svg class="i i-sm" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+                    <button disabled aria-label="Forward"><svg class="i i-sm" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+                    <button aria-label="Reload"><svg class="i i-sm" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+                </div>
+                <div class="addr-bar-display">
+                    <svg class="i i-sm" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                    <span>https://www.bankofsecure.com/dashboard</span>
+                </div>
+            </div>
+
+            <div class="browser-body">
+                <div class="bank">
+                    <div class="bank-header">
+                        <span class="bank-logo">Bank of Secure</span>
+                        <nav class="bank-nav"><span>Welcome, testuser</span><span>Sign out</span></nav>
+                    </div>
+
+                    <div class="bank-dash">
+                        <div>
+                            <h1>Good afternoon, testuser</h1>
+                            <div class="sub">Last signed in today at 10:30 AM · 192.168.1.1</div>
+                        </div>
+                        <div>
+                            <div class="bank-section-title">Accounts</div>
+                            <div class="bank-acct">
+                                <div>
+                                    <div class="bank-acct-name">Everyday Checking</div>
+                                    <div class="bank-acct-num">····4567</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div class="bank-acct-bal-label">Available</div>
+                                    <div class="bank-acct-bal">${{ balance }}.00</div>
+                                </div>
+                                <a href="{{ url_for('transfer') }}" class="bank-btn" style="width: auto; padding: 0 18px; display: inline-flex; align-items: center; text-decoration: none;">Transfer</a>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="bank-section-title">Quick actions</div>
+                            <div class="bank-quick">
+                                <a href="{{ url_for('transfer') }}" class="bank-quick-item" style="text-decoration: none;">
+                                    <svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                                    <div class="label">Transfer money</div>
+                                    <div class="hint">Send to another account</div>
+                                </a>
+                                <button type="button" class="bank-quick-item">
+                                    <svg class="i" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
+                                    <div class="label">Pay bills</div>
+                                    <div class="hint">Manage payees</div>
+                                </button>
+                                <button type="button" class="bank-quick-item">
+                                    <svg class="i" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+                                    <div class="label">Statements</div>
+                                    <div class="hint">Download PDF</div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bank-footer">
+                        <span>© 2026 Bank of Secure · Member FDIC</span>
+                        <span>Routing 987654321</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% if not pvp_defender %}
+<!-- Scam popup #1 -->
+<div class="modal-scrim" id="lottery-modal">
+    <div class="modal scam-modal">
+        <div class="modal-head">
+            <div class="scam-modal-title">
+                <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4 2 7-6.5-4.5L5.5 20l2-7L2 9h7z"/></svg>
+                You are today's lucky winner
+            </div>
+        </div>
+        <div class="modal-body">
+            <div class="scam-prize">$1,000,000</div>
+            <p class="scam-text">You've been selected for the International Prince Lottery. To release your prize, a small processing fee of <strong style="color: var(--text);">$100</strong> is required.</p>
+            <div class="scam-urgent">
+                <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                Claim within 24 hours
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn btn-ghost" onclick="closeLottery()">Ignore</button>
+            <a href="{{ url_for('attack_clicked', type='lottery') }}" class="btn btn-danger">Claim prize</a>
+        </div>
+    </div>
+</div>
+
+<!-- Scam popup #2 -->
+<div class="modal-scrim" id="verify-modal" style="display: none;">
+    <div class="modal scam-modal">
+        <div class="modal-head">
+            <div class="scam-modal-title">
+                <svg class="i i-sm" viewBox="0 0 24 24"><path d="M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h0"/></svg>
+                Security alert
+            </div>
+        </div>
+        <div class="modal-body">
+            <p class="scam-text" style="color: var(--text);"><strong>Suspicious activity detected.</strong> Verify your identity to keep your account active.</p>
+            <form id="verify-form" action="{{ url_for('attack_clicked', type='verify') }}" class="scam-form">
+                <input class="bank-input" placeholder="Social Security Number — XXX-XX-XXXX">
+                <input class="bank-input" placeholder="Card number — XXXX XXXX XXXX XXXX">
+                <input class="bank-input" placeholder="CVV">
+            </form>
+        </div>
+        <div class="modal-foot">
+            <button class="btn btn-ghost" onclick="closeVerify()">Close</button>
+            <a href="{{ url_for('attack_clicked', type='verify') }}" class="btn btn-danger">Verify now</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% include '_desktop_close.html' %}
+{% endblock %}
+
+{% block scripts %}
+{% if not pvp_defender %}
+<script>
+function closeLottery(){
+    document.getElementById('lottery-modal').style.display = 'none';
+    fetch('/popup_closed?type=lottery');
+    setTimeout(function(){ document.getElementById('verify-modal').style.display = 'grid'; }, 1200);
+}
+function closeVerify(){
+    document.getElementById('verify-modal').style.display = 'none';
+    fetch('/popup_closed?type=verify');
+}
+document.getElementById('verify-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    window.location.href = "{{ url_for('attack_clicked', type='verify') }}";
+});
+</script>
+{% endif %}
+{% endblock %}

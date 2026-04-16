@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Sentinel — Match result{% endblock %}
+
+{% block body %}
+{% set page_stage = 'start' %}
+{% set active_app = 'sentinel' %}
+{% include '_desktop_open.html' %}
+
+{% set you_won = (role == match.winner) %}
+
+<section class="window window--md">
+    <div class="win-chrome">
+        <div class="win-traffic"><span class="light close"></span><span class="light minimize"></span><span class="light maximize"></span></div>
+        <div class="win-title">Sentinel · Match result</div>
+    </div>
+    <div class="win-body">
+        <div class="result">
+            <div class="result-hero">
+                <span class="result-badge {{ 'win' if you_won else 'lose' }}">
+                    {% if you_won %}
+                    <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                    You won
+                    {% else %}
+                    <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                    You lost
+                    {% endif %}
+                </span>
+                <h1>
+                    {% if match.winner == 'defender' %}The defender completed the mission.
+                    {% elif match.winner == 'attacker' %}The attacker compromised the defender.
+                    {% else %}Match ended.{% endif %}
+                </h1>
+                <p class="result-lead">
+                    You played as <strong style="color: var(--text);">{{ role or 'spectator' }}</strong>.
+                    {% if match.loss_reason %}Failure mode: <span class="mono">{{ match.loss_reason }}</span>.{% endif %}
+                </p>
+            </div>
+
+            <div class="card">
+                <div class="card-head"><div class="card-title">Match summary</div></div>
+                <div class="info-list">
+                    <div class="info-row"><span class="k">Room</span><span class="v mono">{{ match.room_code }}</span></div>
+                    <div class="info-row"><span class="k">Winner</span><span class="v">{{ match.winner or '—' }}</span></div>
+                    <div class="info-row"><span class="k">Started</span><span class="v mono">{{ match.started_at or '—' }}</span></div>
+                    <div class="info-row"><span class="k">Ended</span><span class="v mono">{{ match.ended_at or '—' }}</span></div>
+                </div>
+            </div>
+
+            <div class="result-actions">
+                <a href="{{ url_for('pvp_landing') }}" class="btn btn-primary btn-lg">New match</a>
+                <a href="{{ url_for('start') }}" class="btn btn-ghost btn-lg">Back to single-player</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% include '_desktop_close.html' %}
+{% endblock %}

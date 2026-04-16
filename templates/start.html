@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Sentinel — Mission briefing{% endblock %}
+
+{% block body %}
+{% set page_stage = 'start' %}
+{% set active_app = 'sentinel' %}
+{% include '_desktop_open.html' %}
+
+<section class="window window--md">
+    <div class="win-chrome">
+        <div class="win-traffic"><span class="light close"></span><span class="light minimize"></span><span class="light maximize"></span></div>
+        <div class="win-title">Sentinel · Mission briefing</div>
+    </div>
+    <div class="win-body">
+        <section class="hero">
+            <span class="hero-eyebrow">
+                <span class="badge-dot"></span>
+                Briefing
+            </span>
+
+            <h1>
+                Move $500 to Grandma.<br>
+                <span class="accent">Don't get phished along the way.</span>
+            </h1>
+
+            <p class="hero-lead">
+                A controlled simulation of the attacks that compromise real accounts: spoofed senders, look-alike domains, social-engineered popups. Your job is to notice what most people miss.
+            </p>
+
+            <div class="hero-brief">
+                <div class="hero-brief-cell">
+                    <div class="k">Recipient</div>
+                    <div class="v">Grandma</div>
+                </div>
+                <div class="hero-brief-cell">
+                    <div class="k">Account</div>
+                    <div class="v mono">123456789</div>
+                </div>
+                <div class="hero-brief-cell">
+                    <div class="k">Routing</div>
+                    <div class="v mono">987654321</div>
+                </div>
+                <div class="hero-brief-cell">
+                    <div class="k">Time limit</div>
+                    <div class="v mono">10:00</div>
+                </div>
+            </div>
+
+            <div class="hero-actions">
+                <button class="btn btn-primary btn-lg" onclick="beginMission()">
+                    Open Mail
+                    <svg class="i i-sm" viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                </button>
+                <a href="{{ url_for('pvp_landing') }}" class="btn btn-secondary btn-lg">
+                    <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Versus mode
+                </a>
+                <a href="{{ url_for('credits') }}" class="btn btn-ghost btn-lg">About</a>
+            </div>
+        </section>
+    </div>
+</section>
+
+{% include '_desktop_close.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function beginMission(){
+    fetch('/start_game', { method: 'POST' });
+    sessionStorage.removeItem('timeLeft');
+    window.location.href = "{{ url_for('email') }}";
+}
+</script>
+{% endblock %}

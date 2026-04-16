@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Sentinel — Debrief{% endblock %}
+
+{% block body %}
+{% set page_stage = 'transfer' %}
+{% set active_app = 'sentinel' %}
+{% include '_desktop_open.html' %}
+
+<section class="window window--md">
+    <div class="win-chrome">
+        <div class="win-traffic"><span class="light close"></span><span class="light minimize"></span><span class="light maximize"></span></div>
+        <div class="win-title">Sentinel · Debrief</div>
+    </div>
+    <div class="win-body">
+        <div class="result">
+            <div class="result-hero">
+                <span class="result-badge lose">
+                    <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                    Attack succeeded
+                </span>
+                <h1>{{ explanation.title }}</h1>
+                <p class="result-lead">{{ explanation.details }}</p>
+            </div>
+
+            <div class="score-block">
+                <div><span class="score-number">{{ score }}</span><span class="score-max">/ 100</span></div>
+                <div>
+                    <div class="t-caption" style="margin-bottom: 4px;">Trust score</div>
+                    <div class="score-message">
+                        {% if score >= 80 %}Close — a single slip ended the run.
+                        {% elif score >= 50 %}Multiple warning signs were available before the breach.
+                        {% else %}Several compounding mistakes. Walk through the log below.
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head"><div class="card-title">What you should have noticed</div></div>
+                <div class="flag-list">
+                    {% for flag in explanation.red_flags %}
+                    <div class="flag">
+                        <svg class="i" viewBox="0 0 24 24"><path d="M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h0"/></svg>
+                        <span>{{ flag }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if actions %}
+            <div class="card">
+                <div class="card-head"><div class="card-title">Session log</div><span class="badge">{{ actions|length }} events</span></div>
+                <div class="action-log">
+                    {% for action in actions %}
+                    <div class="action-log-row">
+                        <div>
+                            <div class="action-log-name">{{ action.action }}</div>
+                            <div class="action-log-outcome">{{ action.outcome }}</div>
+                        </div>
+                        {% if action.score_change != 0 %}
+                        <span class="action-log-delta {% if action.score_change < 0 %}neg{% else %}pos{% endif %}">{{ '+' if action.score_change > 0 else '' }}{{ action.score_change }}</span>
+                        {% else %}
+                        <span class="action-log-delta" style="color: var(--text-faint);">—</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card">
+                <div class="card-head"><div class="card-title">Core principles</div></div>
+                <div class="tips">
+                    <div class="tip"><h4><svg class="i i-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Verify the sender domain</h4><p>Real banks never use Gmail. Typosquats, extra hyphens, and wrong TLDs are the most common vectors.</p></div>
+                    <div class="tip"><h4><svg class="i i-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Check the URL, not the page</h4><p>A phishing page can copy every pixel. The address bar is the one thing attackers can't fake.</p></div>
+                    <div class="tip"><h4><svg class="i i-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Urgency is the lure</h4><p>"Act now," "24 hours," "verify immediately" — all designed to bypass your judgment.</p></div>
+                    <div class="tip"><h4><svg class="i i-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>No popup should ever collect SSN</h4><p>If an overlay asks for sensitive data, close the tab and go to the site directly.</p></div>
+                </div>
+            </div>
+
+            <div class="result-actions">
+                <a href="{{ url_for('new_game') }}" class="btn btn-primary btn-lg">Try again</a>
+                <a href="https://consumer.ftc.gov/articles/how-recognize-and-avoid-phishing-scams" target="_blank" rel="noopener" class="btn btn-secondary btn-lg">FTC phishing guide</a>
+                <a href="{{ url_for('credits') }}" class="btn btn-ghost btn-lg">Credits</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% include '_desktop_close.html' %}
+{% endblock %}

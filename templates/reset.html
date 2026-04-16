@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Bank of Secure — Password reset{% endblock %}
+
+{% block body %}
+{% set page_stage = 'reset' %}
+{% set active_app = 'browser' %}
+{% include '_desktop_open.html' %}
+
+<section class="window window--lg">
+    <div class="win-chrome">
+        <div class="win-traffic"><span class="light close"></span><span class="light minimize"></span><span class="light maximize"></span></div>
+        <div class="win-title">Browser</div>
+    </div>
+
+    <div class="browser-tabs">
+        <div class="browser-tab active">
+            <svg class="fav i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+            <span class="title">Bank of Secure — Reset password</span>
+        </div>
+    </div>
+
+    <div class="win-body" style="padding: 0;">
+        <div class="browser-frame">
+            <div class="browser-chrome">
+                <div class="browser-nav">
+                    <button disabled aria-label="Back"><svg class="i i-sm" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+                    <button disabled aria-label="Forward"><svg class="i i-sm" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+                </div>
+                <div class="addr-bar-display">
+                    <svg class="i i-sm" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                    <span>https://www.bankofsecure.com/reset</span>
+                </div>
+            </div>
+
+            <div class="browser-body">
+                <div class="bank">
+                    <div class="bank-header">
+                        <span class="bank-logo">Bank of Secure</span>
+                        <nav class="bank-nav"><span>Personal</span><span>Business</span><span>Support</span></nav>
+                    </div>
+
+                    <div class="bank-main">
+                        <form method="POST" action="{{ url_for('reset') }}" id="reset-form" class="bank-card" style="max-width: 440px;">
+                            <h1>Reset your password</h1>
+                            {% if error %}
+                            <div class="alert alert-danger" style="margin-bottom: var(--s-4);">
+                                <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h0"/></svg>
+                                {{ error }}
+                            </div>
+                            {% endif %}
+                            <label class="bank-label" for="username">Username</label>
+                            <input class="bank-input" type="text" id="username" value="testuser" disabled>
+                            <label class="bank-label" for="password">New password</label>
+                            <input class="bank-input" type="password" id="password" name="password" required oninput="checkStrength()">
+                            <label class="bank-label" for="confirm">Confirm password</label>
+                            <input class="bank-input" type="password" id="confirm" name="confirm" required oninput="checkMatch()">
+                            <small id="match-status" class="strength-label" style="display:block; margin-top:-8px; margin-bottom: var(--s-4);"></small>
+                            <div class="strength">
+                                <div class="strength-track"><div class="strength-fill" id="strength-fill"></div></div>
+                                <span class="strength-label" id="strength-label">Enter a password to check strength</span>
+                            </div>
+                            <ul class="reqs">
+                                <li id="req-length">8+ characters</li>
+                                <li id="req-upper">Uppercase</li>
+                                <li id="req-lower">Lowercase</li>
+                                <li id="req-number">Number</li>
+                                <li id="req-special">Symbol</li>
+                            </ul>
+                            <button type="submit" class="bank-btn" id="submit-btn" style="margin-top: var(--s-6);">Reset password</button>
+                        </form>
+                    </div>
+
+                    <div class="bank-footer">
+                        <span>© 2026 Bank of Secure · Member FDIC</span>
+                        <span><a href="#">Privacy</a> · <a href="#">Terms</a></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="modal-scrim" id="weak-modal" style="display: none;">
+    <div class="modal">
+        <div class="modal-head"><div class="modal-title">Weak password</div></div>
+        <div class="modal-body t-body">
+            This password is easy to guess. Attackers who obtain your email address can crack it in seconds. Are you sure you want to continue?
+        </div>
+        <div class="modal-foot">
+            <button class="btn btn-ghost" onclick="closeWeak()">Choose stronger</button>
+            <button class="btn btn-danger" onclick="submitAnyway()">Use anyway</button>
+        </div>
+    </div>
+</div>
+
+{% include '_desktop_close.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentStrength = 'weak';
+function checkStrength(){
+    var pw = document.getElementById('password').value;
+    var fill = document.getElementById('strength-fill');
+    var label = document.getElementById('strength-label');
+    var up = /[A-Z]/.test(pw), lo = /[a-z]/.test(pw), d = /\d/.test(pw), sp = /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(pw);
+    document.getElementById('req-length').classList.toggle('met', pw.length >= 8);
+    document.getElementById('req-upper').classList.toggle('met', up);
+    document.getElementById('req-lower').classList.toggle('met', lo);
+    document.getElementById('req-number').classList.toggle('met', d);
+    document.getElementById('req-special').classList.toggle('met', sp);
+    var variety = [up,lo,d,sp].filter(Boolean).length;
+    var s = (pw.length < 8 || variety < 2) ? 'weak' : (pw.length < 12 || variety < 3) ? 'medium' : 'strong';
+    fill.className = 'strength-fill ' + s;
+    label.className = 'strength-label ' + s;
+    label.textContent = s === 'weak' ? 'Weak — easily guessed' : s === 'medium' ? 'Acceptable — could be stronger' : 'Strong';
+    currentStrength = s;
+}
+function checkMatch(){
+    var p = document.getElementById('password').value;
+    var c = document.getElementById('confirm').value;
+    var s = document.getElementById('match-status');
+    if (!c) { s.textContent = ''; return; }
+    if (p === c) { s.textContent = 'Passwords match'; s.className = 'strength-label strong'; }
+    else { s.textContent = 'Passwords do not match'; s.className = 'strength-label weak'; }
+}
+document.getElementById('reset-form').addEventListener('submit', function(e){
+    var p = document.getElementById('password').value;
+    var c = document.getElementById('confirm').value;
+    if (p !== c) { e.preventDefault(); alert('Passwords do not match.'); return; }
+    if (currentStrength === 'weak') { e.preventDefault(); document.getElementById('weak-modal').style.display = 'grid'; }
+});
+function closeWeak(){ document.getElementById('weak-modal').style.display = 'none'; document.getElementById('password').focus(); }
+function submitAnyway(){ document.getElementById('weak-modal').style.display = 'none'; document.getElementById('reset-form').submit(); }
+</script>
+{% endblock %}

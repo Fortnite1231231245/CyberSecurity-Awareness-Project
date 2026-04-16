@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Browser — New tab{% endblock %}
+
+{% block body %}
+{% set page_stage = 'browser' %}
+{% set active_app = 'browser' %}
+{% include '_desktop_open.html' %}
+
+<section class="window window--lg">
+    <div class="win-chrome">
+        <div class="win-traffic"><span class="light close"></span><span class="light minimize"></span><span class="light maximize"></span></div>
+        <div class="win-title">Browser</div>
+    </div>
+
+    <div class="browser-tabs">
+        <div class="browser-tab active">
+            <svg class="fav i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg>
+            <span class="title">New tab</span>
+        </div>
+        <div class="browser-tab-new">
+            <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+    </div>
+
+    <div class="win-body" style="padding: 0;">
+        <div class="browser-frame">
+            <div class="browser-chrome">
+                <div class="browser-nav">
+                    <button disabled aria-label="Back"><svg class="i i-sm" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+                    <button disabled aria-label="Forward"><svg class="i i-sm" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+                    <button aria-label="Reload"><svg class="i i-sm" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+                </div>
+                <form action="{{ url_for('site') }}" method="GET" class="addr-form">
+                    <div class="addr-bar" id="addr-bar">
+                        <svg class="i i-sm" id="addr-icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                        <input type="text" name="url" id="url-input"
+                               placeholder="Enter URL — e.g. https://www.bankofsecure.com"
+                               {% if prompt == 'login' %}value="https://www.bankofsecure.com"{% endif %}
+                               autocomplete="off" spellcheck="false">
+                    </div>
+                    <button type="submit" class="btn btn-secondary btn-sm" style="height: 32px;">Go</button>
+                </form>
+            </div>
+
+            <div class="browser-body" style="padding: var(--s-10) var(--s-8);">
+                {% if error %}
+                <div class="browser-empty">
+                    <h2>This page can't be reached</h2>
+                    <p class="t-body">{{ error }}</p>
+                </div>
+                {% elif prompt == 'login' %}
+                <div class="browser-empty">
+                    <span class="hero-eyebrow"><span class="badge-dot"></span> Next step</span>
+                    <h2 style="margin-top: var(--s-4);">Sign in to complete the transfer</h2>
+                    <p>Navigate to the official bank URL:</p>
+                    <p><code>https://www.bankofsecure.com</code></p>
+                    <div class="alert alert-warning" style="margin-top: var(--s-5); max-width: 480px;">
+                        <svg class="i" viewBox="0 0 24 24"><path d="M12 9v4M12 17h0"/><path d="M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                        <span>Phishing URLs mimic the real one. Read every character.</span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="browser-empty">
+                    <span class="t-caption">Start page</span>
+                    <h2 style="margin-top: var(--s-3);">Where to?</h2>
+                    <p>Type a URL above or use a saved bookmark.</p>
+                    <div class="bookmark-row">
+                        <div class="t-caption" style="margin-bottom: var(--s-3);">Bookmarks</div>
+                        <a href="{{ url_for('site', url='https://www.bankofsecure.com') }}" class="bookmark">
+                            <svg class="i i-sm" viewBox="0 0 24 24"><path d="M3 21V7l9-4 9 4v14"/><path d="M9 21V12h6v9"/></svg>
+                            bankofsecure.com
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+{% include '_desktop_close.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+var input = document.getElementById('url-input');
+var bar = document.getElementById('addr-bar');
+var icon = document.getElementById('addr-icon');
+function iconLock(){ icon.innerHTML = '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'; }
+function iconWarn(){ icon.innerHTML = '<path d="M12 9v4M12 17h0"/><path d="M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>'; }
+function iconSearch(){ icon.innerHTML = '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>'; }
+input.addEventListener('input', function(){
+    var v = input.value.toLowerCase();
+    if (v.startsWith('https://')) { bar.classList.remove('insecure'); iconLock(); }
+    else if (v.startsWith('http://')) { bar.classList.add('insecure'); iconWarn(); }
+    else { bar.classList.remove('insecure'); iconSearch(); }
+});
+</script>
+{% endblock %}

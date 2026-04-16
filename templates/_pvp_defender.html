@@ -1,0 +1,155 @@
+{#
+  Included only when the active Flask session is a defender bound to an active match.
+  Renders:
+   - reusable scam popup markup (hidden until an effect fires)
+   - an <aside> distraction banner
+   - the polling script that pings /effects and shows the appropriate UI
+#}
+<style>
+.pvp-banner {
+    position: fixed;
+    top: 30px; left: 0; right: 0;
+    background: linear-gradient(90deg, #7A1A1A 0%, #5F1414 50%, #7A1A1A 100%);
+    color: #FCA5A5;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    z-index: 1500;
+    border-bottom: 1px solid rgba(0,0,0,0.4);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    animation: pvp-slide 280ms cubic-bezier(0.2,0.8,0.2,1);
+    transform: translateY(-100%);
+}
+.pvp-banner.show { transform: translateY(0); }
+@keyframes pvp-slide { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+.pvp-banner .i { color: #FCA5A5; }
+.pvp-banner-close {
+    margin-left: auto;
+    width: 24px; height: 24px;
+    display: grid; place-items: center;
+    border-radius: 4px;
+    color: #FCA5A5;
+    cursor: pointer;
+}
+.pvp-banner-close:hover { background: rgba(255,255,255,0.1); }
+</style>
+
+<!-- Distraction banner -->
+<div class="pvp-banner" id="pvp-banner">
+    <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h0"/></svg>
+    <span id="pvp-banner-text">URGENT: Unauthorized login attempt detected on your account. Click here to secure it immediately.</span>
+    <span class="pvp-banner-close" onclick="document.getElementById('pvp-banner').classList.remove('show')">✕</span>
+</div>
+
+<!-- Injected attack popup host -->
+<div id="pvp-popup-host"></div>
+
+<script>
+(function() {
+    const CODE = "{{ match_code }}";
+    const CURRENT_STAGE = "{{ page_stage|default('start') }}";
+
+    // Report current stage once per page load (helps attacker see transitions promptly)
+    fetch(`/api/match/${CODE}/stage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage: CURRENT_STAGE })
+    });
+
+    function lotteryHTML() {
+        return `
+        <div class="modal-scrim" id="pvp-lottery">
+          <div class="modal scam-modal">
+            <div class="modal-head">
+              <div class="scam-modal-title">
+                <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4 2 7-6.5-4.5L5.5 20l2-7L2 9h7z"/></svg>
+                You are today's lucky winner
+              </div>
+            </div>
+            <div class="modal-body">
+              <div class="scam-prize">$1,000,000</div>
+              <p class="scam-text">You've been selected for the International Prince Lottery. To release your prize, a small processing fee of <strong style="color: var(--text);">$100</strong> is required.</p>
+              <div class="scam-urgent">
+                <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                Claim within 24 hours
+              </div>
+            </div>
+            <div class="modal-foot">
+              <button class="btn btn-ghost" data-pvp-dismiss="lottery">Ignore</button>
+              <a href="/attack_clicked?type=lottery" class="btn btn-danger">Claim prize</a>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function verifyHTML() {
+        return `
+        <div class="modal-scrim" id="pvp-verify">
+          <div class="modal scam-modal">
+            <div class="modal-head">
+              <div class="scam-modal-title">
+                <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h0"/></svg>
+                Security alert
+              </div>
+            </div>
+            <div class="modal-body">
+              <p class="scam-text" style="color: var(--text);"><strong>Suspicious activity detected.</strong> Verify your identity to keep your account active.</p>
+              <div class="scam-form">
+                <input class="bank-input" placeholder="Social Security Number — XXX-XX-XXXX">
+                <input class="bank-input" placeholder="Card number — XXXX XXXX XXXX XXXX">
+                <input class="bank-input" placeholder="CVV">
+              </div>
+            </div>
+            <div class="modal-foot">
+              <button class="btn btn-ghost" data-pvp-dismiss="verify">Close</button>
+              <a href="/attack_clicked?type=verify" class="btn btn-danger">Verify now</a>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function showPopup(html, key) {
+        const host = document.getElementById('pvp-popup-host');
+        // Avoid duplicate concurrent popups of same kind
+        if (host.querySelector(`#pvp-${key}`)) return;
+        const wrap = document.createElement('div');
+        wrap.innerHTML = html;
+        const node = wrap.firstElementChild;
+        host.appendChild(node);
+        node.style.display = 'grid';
+        node.querySelectorAll('[data-pvp-dismiss]').forEach(b => {
+            b.addEventListener('click', () => {
+                fetch(`/popup_closed?type=${key}`);
+                node.remove();
+            });
+        });
+    }
+
+    function showBanner() {
+        const b = document.getElementById('pvp-banner');
+        b.classList.add('show');
+        setTimeout(() => b.classList.remove('show'), 7000);
+    }
+
+    async function poll() {
+        try {
+            const r = await fetch(`/api/match/${CODE}/effects`);
+            if (!r.ok) return;
+            const data = await r.json();
+            if (data.status === 'finished') {
+                window.location.href = `/pvp/result/${CODE}`;
+                return;
+            }
+            for (const eff of (data.effects || [])) {
+                if (eff.type === 'lottery_popup') showPopup(lotteryHTML(), 'lottery');
+                else if (eff.type === 'verify_popup') showPopup(verifyHTML(), 'verify');
+                else if (eff.type === 'distraction_banner') showBanner();
+            }
+        } catch(e) {}
+    }
+
+    poll();
+    setInterval(poll, 1500);
+})();
+</script>

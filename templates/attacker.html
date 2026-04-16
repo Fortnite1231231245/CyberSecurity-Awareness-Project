@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Attacker — Console · {{ match.room_code }}{% endblock %}
+
+{% block head %}
+<style>
+/* Attacker-only accent: red ops console feel */
+.atk-console { display: grid; grid-template-columns: 1fr 340px; gap: 0; height: 100%; }
+.atk-main { padding: var(--s-8); overflow: auto; }
+.atk-side { border-left: 1px solid var(--border); background: var(--surface-2); padding: var(--s-6); overflow: auto; }
+.atk-ability {
+    border: 1px solid var(--border); border-radius: var(--r-lg);
+    padding: var(--s-5); margin-bottom: var(--s-3);
+    background: var(--surface-1);
+    display: grid; grid-template-columns: 1fr auto; gap: var(--s-4);
+    transition: border-color var(--t-fast);
+}
+.atk-ability:hover { border-color: var(--border-strong); }
+.atk-ability.locked { opacity: 0.55; }
+.atk-ability-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.atk-ability-title .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--danger); }
+.atk-ability-desc { font-size: 12.5px; color: var(--text-muted); }
+.atk-ability-meta { display: flex; gap: var(--s-3); font-size: 11px; color: var(--text-subtle); margin-top: var(--s-3); letter-spacing: 0.04em; text-transform: uppercase; }
+.atk-fire {
+    display: inline-flex; align-items: center; justify-content: center; align-self: center;
+    height: 40px; padding: 0 var(--s-5);
+    background: var(--danger); color: #fff;
+    border-radius: var(--r-md); font-weight: 500; font-size: 13px;
+    transition: background var(--t-fast);
+    min-width: 110px; font-variant-numeric: tabular-nums;
+}
+.atk-fire:hover:not(:disabled) { background: #F87171; }
+.atk-fire:disabled { background: var(--surface-3); color: var(--text-faint); cursor: not-allowed; }
+.atk-status { padding: var(--s-4); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-1); margin-bottom: var(--s-4); }
+.atk-status .k { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-subtle); }
+.atk-status .v { font-size: 15px; font-weight: 600; margin-top: 2px; font-family: var(--font-mono); }
+.atk-feed { display: flex; flex-direction: column; gap: var(--s-2); }
+.atk-feed-row {
+    font-size: 12px; color: var(--text-muted);
+    padding: 6px 10px; border-left: 2px solid var(--accent);
+    background: var(--surface-1);
+    border-radius: 0 4px 4px 0;
+    font-family: var(--font-mono);
+}
+.atk-feed-row.err { border-left-color: var(--warning); color: #FCD9A1; }
+.atk-feed-row.ok { border-left-color: var(--success); color: #86EFAC; }
+</style>
+{% endblock %}
+
+{% block body %}
+{% set page_stage = 'start' %}
+{% set active_app = 'sentinel' %}
+{% include '_desktop_open.html' %}
+
+<section class="window window--lg">
+    <div class="win-chrome">
+        <div class="win-traffic"><span class="light close"></span><span class="light minimize"></span><span class="light maximize"></span></div>
+        <div class="win-title">Red Ops · {{ match.room_code }}</div>
+    </div>
+    <div class="win-body" style="padding: 0;">
+        <div class="atk-console">
+            <!-- Abilities -->
+            <div class="atk-main">
+                <div class="card-eyebrow">Red Ops console</div>
+                <h1 class="t-h1" style="margin-bottom: var(--s-2);">Abilities</h1>
+                <p class="t-body" style="margin-bottom: var(--s-6);">Trigger attacks against the defender. Some require the defender to be at a specific stage.</p>
+
+                {% for eff_id, eff in effects.items() %}
+                <div class="atk-ability" data-effect="{{ eff_id }}" data-stages="{{ (eff.stages|join(',')) if eff.stages else '' }}">
+                    <div>
+                        <div class="atk-ability-title"><span class="dot"></span>{{ eff.label }}</div>
+                        <div class="atk-ability-desc">{{ eff.desc }}</div>
+                        <div class="atk-ability-meta">
+                            <span>Cooldown · {{ eff.cooldown }}s</span>
+                            {% if eff.stages %}<span>Requires · {{ eff.stages|join(' / ') }}</span>{% else %}<span>No stage gate</span>{% endif %}
+                        </div>
+                    </div>
+                    <button class="atk-fire" data-fire="{{ eff_id }}">Fire</button>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Live intel sidebar -->
+            <aside class="atk-side">
+                <div class="card-eyebrow">Target</div>
+                <div class="atk-status">
+                    <div class="k">Defender stage</div>
+                    <div class="v" id="def-stage">—</div>
+                </div>
+                <div class="atk-status">
+                    <div class="k">Match</div>
+                    <div class="v" id="match-status">active</div>
+                </div>
+                <div class="card-eyebrow" style="margin-top: var(--s-5);">Feed</div>
+                <div class="atk-feed" id="feed"></div>
+            </aside>
+        </div>
+    </div>
+</section>
+
+{% include '_desktop_close.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CODE = "{{ match.room_code }}";
+const STAGE_LABELS = { start: 'Mission briefing', email: 'Inbox', reset: 'Password reset', browser: 'Browser', login: 'Sign in', fake_login: 'Fake sign-in', dashboard: 'Dashboard', transfer: 'Transfer' };
+
+function feedAdd(msg, cls) {
+    const feed = document.getElementById('feed');
+    const row = document.createElement('div');
+    row.className = 'atk-feed-row ' + (cls || '');
+    const t = new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+    row.textContent = `[${t}] ${msg}`;
+    feed.prepend(row);
+    while (feed.children.length > 12) feed.removeChild(feed.lastChild);
+}
+
+async function poll() {
+    try {
+        const r = await fetch(`/api/match/${CODE}/cooldowns`);
+        if (!r.ok) return;
+        const s = await r.json();
+        document.getElementById('def-stage').textContent = STAGE_LABELS[s.defender_stage] || s.defender_stage || '—';
+        document.getElementById('match-status').textContent = s.status;
+        if (s.status === 'finished') {
+            feedAdd('Match ended · winner: ' + (s.winner || 'none'), s.winner === 'attacker' ? 'ok' : 'err');
+            window.location.href = `/pvp/result/${CODE}`;
+            return;
+        }
+        document.querySelectorAll('.atk-ability').forEach(el => {
+            const id = el.dataset.effect;
+            const btn = el.querySelector('[data-fire]');
+            const stages = (el.dataset.stages || '').split(',').filter(Boolean);
+            const stageOK = stages.length === 0 || stages.includes(s.defender_stage);
+            const cd = s.cooldowns[id] || 0;
+            if (!stageOK) {
+                el.classList.add('locked');
+                btn.disabled = true;
+                btn.textContent = 'Locked';
+            } else if (cd > 0) {
+                el.classList.remove('locked');
+                btn.disabled = true;
+                btn.textContent = `${cd.toFixed(0)}s`;
+            } else {
+                el.classList.remove('locked');
+                btn.disabled = false;
+                btn.textContent = 'Fire';
+            }
+        });
+    } catch(e) {}
+}
+
+document.querySelectorAll('[data-fire]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const type = btn.dataset.fire;
+        btn.disabled = true; btn.textContent = '…';
+        try {
+            const r = await fetch(`/api/match/${CODE}/ability`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type })
+            });
+            const j = await r.json();
+            if (r.ok) feedAdd(`Fired ${type}`, 'ok');
+            else if (j.error === 'cooldown') feedAdd(`${type}: on cooldown (${j.remaining}s)`, 'err');
+            else if (j.error === 'stage_locked') feedAdd(`${type}: ${j.message}`, 'err');
+            else feedAdd(`${type}: ${j.error || 'failed'}`, 'err');
+        } catch(e) { feedAdd(`${type}: network error`, 'err'); }
+        poll();
+    });
+});
+
+feedAdd('Console online. Target acquired: ' + CODE, 'ok');
+poll(); setInterval(poll, 1500);
+</script>
+{% endblock %}

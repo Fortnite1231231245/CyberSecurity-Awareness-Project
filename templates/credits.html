@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Sentinel — Team{% endblock %}
+
+{% block body %}
+{% set page_stage = 'start' %}
+{% set active_app = 'sentinel' %}
+{% include '_desktop_open.html' %}
+
+<section class="window window--md">
+    <div class="win-chrome">
+        <div class="win-traffic"><span class="light close"></span><span class="light minimize"></span><span class="light maximize"></span></div>
+        <div class="win-title">Sentinel · About</div>
+    </div>
+    <div class="win-body">
+        <div class="credits-wrap">
+            <span class="t-caption">Credits</span>
+            <h1 class="t-display" style="margin: var(--s-3) 0 var(--s-4);">Built by four, for anyone who's ever hovered over a suspicious link.</h1>
+            <p class="t-body" style="max-width: 600px; margin-bottom: var(--s-12);">
+                A security awareness tool designed to build real-world intuition for phishing — not a quiz, not a slideshow, but a timed simulation with consequences.
+            </p>
+
+            <div class="team-grid" style="margin-bottom: var(--s-12);">
+                {% for member in team %}
+                <div class="team-card">
+                    <div class="team-initial">{{ member.name[0] }}</div>
+                    <div class="team-role">{{ member.role }}</div>
+                    <div class="team-name">{{ member.name }}</div>
+                    <div class="team-bio">{{ member.contribution }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div>
+                <span class="t-caption" style="display: block; margin-bottom: var(--s-4);">Project</span>
+                <div class="info-list">
+                    <div class="info-row"><span class="k">Stack</span><span class="v">Python · Flask · SQLite · Vanilla JS</span></div>
+                    <div class="info-row"><span class="k">Purpose</span><span class="v">Cybersecurity awareness training</span></div>
+                    <div class="info-row"><span class="k">Year</span><span class="v">2026</span></div>
+                </div>
+            </div>
+
+            <div class="result-actions" style="margin-top: var(--s-12);">
+                <a href="{{ url_for('start') }}" class="btn btn-primary btn-lg">Start mission</a>
+                <a href="{{ url_for('new_game') }}" class="btn btn-ghost btn-lg">Reset session</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% include '_desktop_close.html' %}
+{% endblock %}

@@ -1,0 +1,87 @@
+{#
+  Closes the desktop shell + renders the dock.
+  Expects: active_app ('sentinel'|'mail'|'browser'|'bank').
+#}
+    </main>
+
+    <!-- Dock -->
+    <nav class="dock" aria-label="Applications">
+        <a href="{{ url_for('start') }}" class="dock-item {% if active_app == 'sentinel' %}active{% endif %}" data-app="sentinel">
+            <div class="app-tile">
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7l8-4z"/></svg>
+            </div>
+            <span class="tooltip">Sentinel</span>
+        </a>
+        <a href="{{ url_for('email') }}" class="dock-item {% if active_app == 'mail' %}active{% endif %}" data-app="mail">
+            <div class="app-tile">
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+            </div>
+            <span class="tooltip">Mail</span>
+        </a>
+        <a href="{{ url_for('browser') }}" class="dock-item {% if active_app == 'browser' %}active{% endif %}" data-app="browser">
+            <div class="app-tile">
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a13.5 13.5 0 0 1 0 18M12 3a13.5 13.5 0 0 0 0 18"/></svg>
+            </div>
+            <span class="tooltip">Browser</span>
+        </a>
+        <a href="{{ url_for('dashboard') if session.get('logged_in') else url_for('browser', prompt='login') }}" class="dock-item {% if active_app == 'bank' %}active{% endif %}" data-app="bank">
+            <div class="app-tile">
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v9h14v-9"/><path d="M9 19v-6h6v6"/></svg>
+            </div>
+            <span class="tooltip">Bank of Secure</span>
+        </a>
+        <div class="dock-divider"></div>
+        <span class="dock-item" data-app="files" title="Files (unavailable)">
+            <div class="app-tile">
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+            </div>
+            <span class="tooltip">Files</span>
+        </span>
+    </nav>
+
+    {% if match_role == 'defender' and match_code %}
+        {% include '_pvp_defender.html' %}
+    {% endif %}
+</div>
+
+<script>
+(function(){
+    // Menubar mission dropdown
+    var trigger = document.getElementById('mission-menu-trigger');
+    var pop = document.getElementById('mission-pop');
+    if (trigger && pop) {
+        trigger.addEventListener('click', function(e){
+            e.stopPropagation();
+            pop.classList.toggle('open');
+        });
+        document.addEventListener('click', function(){ pop.classList.remove('open'); });
+        pop.addEventListener('click', function(e){ e.stopPropagation(); });
+    }
+
+    // Clock
+    function updateClock(){
+        var d = new Date();
+        var h = d.getHours(), m = d.getMinutes();
+        var ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        var el = document.getElementById('menu-clock');
+        if (el) el.textContent = h + ':' + (m<10?'0':'') + m + ' ' + ampm;
+    }
+    updateClock(); setInterval(updateClock, 30000);
+
+    // Timer (persisted via sessionStorage)
+    var stored = sessionStorage.getItem('timeLeft');
+    var timeLeft = stored !== null ? parseInt(stored) : 600;
+    var tEl = document.getElementById('menu-timer');
+    var chip = document.getElementById('menu-timer-chip');
+    function tick(){
+        var m = Math.floor(timeLeft / 60);
+        var s = timeLeft % 60;
+        if (tEl) tEl.textContent = m + ':' + (s<10?'0':'') + s;
+        if (timeLeft <= 120 && chip) chip.classList.add('warn');
+        if (timeLeft > 0) { timeLeft--; sessionStorage.setItem('timeLeft', timeLeft); }
+    }
+    tick();
+    setInterval(tick, 1000);
+})();
+</script>

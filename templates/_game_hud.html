@@ -1,0 +1,78 @@
+{#
+  Mission rail — persistent left sidebar.
+  Expects: page_stage (string), game_score (int, via context processor)
+#}
+{% set current = page_stage|default('start') %}
+{% set effective = 'login' if current == 'fake_login' else current %}
+{% set steps = [
+    {'id': 'start',     'label': 'Overview'},
+    {'id': 'email',     'label': 'Inbox'},
+    {'id': 'reset',     'label': 'Password reset'},
+    {'id': 'browser',   'label': 'Browser'},
+    {'id': 'login',     'label': 'Sign in'},
+    {'id': 'dashboard', 'label': 'Dashboard'},
+    {'id': 'transfer',  'label': 'Transfer'}
+] %}
+{% set step_ids = steps|map(attribute='id')|list %}
+{% set cidx = step_ids.index(effective) if effective in step_ids else 0 %}
+
+<aside class="rail">
+    <div class="rail-brand">
+        <div class="rail-mark">
+            <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7l8-4z"/></svg>
+        </div>
+        <div>
+            <div class="rail-name">Sentinel</div>
+            <div class="rail-sub">Phishing sim</div>
+        </div>
+    </div>
+
+    <div>
+        <div class="rail-section-label">Mission</div>
+        <div class="rail-steps">
+            {% for step in steps %}
+            {% set idx = loop.index0 %}
+            {% set state = 'done' if idx < cidx else ('active' if idx == cidx else '') %}
+            <div class="rail-step {{ state }}">
+                <span class="dot"></span>
+                <span>{{ step.label }}</span>
+                <span class="rail-step-num">{{ '%02d'|format(loop.index) }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="rail-timer" id="rail-timer-chip">
+        <span class="rail-timer-label">Time</span>
+        <span class="rail-timer-value mono" id="rail-timer">10:00</span>
+    </div>
+
+    <div class="rail-score">
+        <div class="rail-score-top">
+            <span class="rail-score-label">Trust score</span>
+            <span class="rail-score-value">{{ game_score }}</span>
+        </div>
+        <div class="rail-score-bar">
+            {% set cls = 'crit' if game_score < 40 else ('warn' if game_score < 70 else '') %}
+            <div class="rail-score-fill {{ cls }}" style="width: {{ game_score }}%"></div>
+        </div>
+    </div>
+</aside>
+
+<script>
+(function(){
+    // Global timer — persists across pages via sessionStorage
+    var stored = sessionStorage.getItem('timeLeft');
+    var timeLeft = stored !== null ? parseInt(stored) : 600;
+    var el = document.getElementById('rail-timer');
+    function tick(){
+        var m = Math.floor(timeLeft / 60);
+        var s = timeLeft % 60;
+        if (el) el.textContent = m + ':' + (s<10?'0':'') + s;
+        if (timeLeft <= 120 && el) el.classList.add('warn');
+        if (timeLeft > 0) { timeLeft--; sessionStorage.setItem('timeLeft', timeLeft); }
+    }
+    tick();
+    setInterval(tick, 1000);
+})();
+</script>
