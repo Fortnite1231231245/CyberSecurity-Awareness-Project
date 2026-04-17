@@ -160,10 +160,12 @@ body.db-body {
     will-change: transform, opacity;
 }
 
-/* Tall spacer makes sticky work as scroll-linked animation track */
-.db-scene--tall  { height: 200vh; }
-.db-scene--xtall { height: 260vh; }
-.db-scene--xxtall{ height: 320vh; }
+/* Tall spacer makes sticky work as scroll-linked animation track.
+   Sticky range = height - 100vh (since stage is 100vh).
+   Kept modest so scenes don't drag. */
+.db-scene--tall  { height: 160vh; }
+.db-scene--xtall { height: 200vh; }
+.db-scene--xxtall{ height: 240vh; }
 
 /* ----- Display type ----- */
 .db-eyebrow {

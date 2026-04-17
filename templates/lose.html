@@ -78,13 +78,25 @@
                 </div>
             </div>
 
+            <a href="{{ url_for('debrief') }}" class="debrief-banner" aria-label="Watch the cinematic debrief">
+                <div class="debrief-banner-copy">
+                    <div class="debrief-banner-eyebrow">
+                        <span class="dot"></span>
+                        Next · cinematic debrief
+                    </div>
+                    <div class="debrief-banner-title">See exactly what happened</div>
+                    <div class="debrief-banner-sub">A scroll-driven walkthrough of the attack — the inbox, the spoofed domain, the popups, and the psychology behind each trap.</div>
+                </div>
+                <div class="debrief-banner-cta">
+                    Watch debrief
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                </div>
+            </a>
+
             <div class="result-actions">
                 <a href="{{ url_for('new_game') }}" class="btn btn-primary btn-lg">Try again</a>
-                <a href="{{ url_for('debrief') }}" class="btn btn-secondary btn-lg">
-                    Watch the debrief
-                    <svg class="i i-sm" viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-                </a>
-                <a href="https://consumer.ftc.gov/articles/how-recognize-and-avoid-phishing-scams" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">FTC guide</a>
+                <a href="https://consumer.ftc.gov/articles/how-recognize-and-avoid-phishing-scams" target="_blank" rel="noopener" class="btn btn-secondary btn-lg">FTC guide</a>
+                <a href="{{ url_for('credits') }}" class="btn btn-ghost btn-lg">Credits</a>
             </div>
         </div>
     </div>

@@ -999,6 +999,98 @@ h1, h2, h3 { color: var(--text); font-weight: 600; }
 
 .result-actions { display: flex; gap: var(--s-3); flex-wrap: wrap; margin-top: var(--s-4); }
 
+/* Debrief CTA banner (shown above result-actions on win/lose) */
+.debrief-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--s-6);
+    padding: var(--s-6) var(--s-8);
+    border-radius: var(--r-xl);
+    background:
+        linear-gradient(135deg, rgba(59,130,246,0.10), rgba(139,92,246,0.08) 45%, rgba(239,68,68,0.10)),
+        var(--surface-1);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    transition: transform var(--t-med) var(--ease), border-color var(--t-med) var(--ease), box-shadow var(--t-med) var(--ease);
+    cursor: pointer;
+}
+.debrief-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(400px 180px at 85% 50%, rgba(59,130,246,0.18), transparent 70%);
+    pointer-events: none;
+    opacity: 0.7;
+    transition: opacity var(--t-med) var(--ease);
+}
+.debrief-banner:hover {
+    border-color: rgba(59,130,246,0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4), 0 0 0 1px rgba(59,130,246,0.15);
+}
+.debrief-banner:hover::before { opacity: 1; }
+.debrief-banner-copy { flex: 1; min-width: 0; position: relative; }
+.debrief-banner-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: var(--s-3);
+}
+.debrief-banner-eyebrow .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+}
+.debrief-banner-title {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
+    color: var(--text);
+}
+.debrief-banner-sub {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--text-muted);
+    max-width: 560px;
+}
+.debrief-banner-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    padding: 12px 20px;
+    border-radius: 999px;
+    background: var(--text);
+    color: var(--bg);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    position: relative;
+    transition: transform var(--t-med) var(--ease), background var(--t-med) var(--ease);
+}
+.debrief-banner-cta svg { width: 14px; height: 14px; }
+.debrief-banner:hover .debrief-banner-cta { transform: translateX(2px); }
+
+@media (max-width: 640px) {
+    .debrief-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--s-4);
+        padding: var(--s-5);
+    }
+    .debrief-banner-cta { align-self: stretch; justify-content: center; }
+}
+
+
 /* =========================================================
    Credits
    ========================================================= */

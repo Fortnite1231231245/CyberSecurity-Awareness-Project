@@ -1,6 +1,7 @@
-// Debrief — scroll-driven cinematic engine
-// Uses rAF + sticky scenes. Each scene computes its own 0→1 progress from
-// its own bounding rect so scenes are independently composable.
+// Debrief — scroll-driven cinematic engine.
+// Each scene is a sticky stage with a tall scroll track. Content appears as the
+// scene approaches (pre-entry), stays fully visible while sticky, and scrolls
+// naturally out the top as the next scene's stage slides in.
 
 (() => {
     const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -10,18 +11,17 @@
     const dots = Array.from(document.querySelectorAll('.db-dot'));
     const glitch = document.querySelector('.db-glitch');
 
-    // Map scene id -> progress handler
     const handlers = {
-        'intro'    : handleIntro,
-        'inbox'    : handleInbox,
-        'diff'     : handleDiff,
-        'link'     : handleLink,
-        'browser'  : handleBrowser,
-        'popups'   : handlePopups,
-        'psych'    : handlePsych,
-        'signs'    : handleSigns,
-        'playbook' : handlePlaybook,
-        'cta'      : handleCta,
+        'intro'   : handleIntro,
+        'inbox'   : handleInbox,
+        'diff'    : handleDiff,
+        'link'    : handleLink,
+        'browser' : handleBrowser,
+        'popups'  : handlePopups,
+        'psych'   : handlePsych,
+        'signs'   : handleSigns,
+        'playbook': handlePlaybook,
+        'cta'     : handleCta,
     };
 
     let rafPending = false;
@@ -36,66 +36,69 @@
         }
     }
 
+    // Progress range: -1 (scene's top one viewport below = just entering bottom)
+    // 0 (scene's top at viewport top = sticky just activated)
+    // 1 (scene's bottom at viewport bottom = about to unstick)
+    function computeProgress(scene, vh) {
+        const rect = scene.getBoundingClientRect();
+        const total = rect.height - vh;
+        if (rect.top <= 0) {
+            if (total <= 0) return 1;
+            return Math.min(1, Math.max(0, -rect.top / total));
+        }
+        // Pre-entry: rect.top in (0, vh]
+        return -Math.min(1, rect.top / vh);
+    }
+
     function tick() {
         rafPending = false;
 
-        // Global progress bar
         const docH = document.documentElement.scrollHeight - window.innerHeight;
         const pct = docH > 0 ? Math.max(0, Math.min(1, lastScrollY / docH)) : 0;
         if (progressBar) progressBar.style.width = (pct * 100).toFixed(2) + '%';
 
-        // Scene progress
         const vh = window.innerHeight;
         let activeIdx = 0;
-        scenes.forEach((scene, i) => {
-            const rect = scene.getBoundingClientRect();
-            // Scene progress: 0 when top of scene enters viewport top, 1 when scene has scrolled out
-            const total = rect.height - vh;
-            const scrolled = -rect.top;
-            const p = total > 0 ? Math.max(0, Math.min(1, scrolled / total)) : (rect.top < 0 ? 1 : 0);
 
-            // Is this scene currently centered?
-            const center = rect.top + rect.height / 2;
-            const vhCenter = vh / 2;
+        scenes.forEach((scene, i) => {
+            const p = computeProgress(scene, vh);
+            const rect = scene.getBoundingClientRect();
             if (rect.top <= vh * 0.5 && rect.bottom >= vh * 0.5) activeIdx = i;
 
-            const id = scene.dataset.scene;
-            const fn = handlers[id];
+            const fn = handlers[scene.dataset.scene];
             if (fn) fn(scene, p);
         });
 
-        // Dots
         dots.forEach((d, i) => d.classList.toggle('active', i === activeIdx));
     }
 
-    // ----- Handler helpers -----
+    // ----- Utilities -----
     function lerp(a, b, t) { return a + (b - a) * t; }
     function clamp01(t) { return Math.max(0, Math.min(1, t)); }
-    // Ease progress windows: [start, end] -> 0→1 inside that window
+    // Map p from [start, end] to [0, 1], clamped.
     function range(p, start, end) {
         if (end === start) return p >= end ? 1 : 0;
         return clamp01((p - start) / (end - start));
     }
 
-    function setOpacity(el, v) { if (el) el.style.opacity = v; }
-    function setTransform(el, t) { if (el) el.style.transform = t; }
-
     // ----- Scene handlers -----
+    // Convention: content fades IN during p ∈ [-0.4, 0] (pre-entry into sticky).
+    // Content stays fully visible for p ∈ [0, 1]. No exit fade — the scene's
+    // sticky release + next scene's stage handle the transition naturally.
 
     function handleIntro(scene, p) {
         const display = scene.querySelector('.db-display');
         const sub = scene.querySelector('.db-intro-sub');
         const hint = scene.querySelector('.db-scroll-hint');
         const eyebrow = scene.querySelector('.db-eyebrow');
-        // First 60% of scroll: fade content out as user leaves
-        const fade = 1 - range(p, 0.5, 1);
-        const lift = -p * 60;
+        // Intro is visible immediately on page load (p = 0). Just lift gently.
+        const travel = -Math.max(0, p) * 30;
         [eyebrow, display, sub].forEach(el => {
             if (!el) return;
-            el.style.opacity = fade;
-            el.style.transform = `translateY(${lift}px)`;
+            el.style.opacity = 1;
+            el.style.transform = `translateY(${travel}px)`;
         });
-        if (hint) hint.style.opacity = 1 - range(p, 0, 0.2);
+        if (hint) hint.style.opacity = 1 - range(p, 0.15, 0.5);
     }
 
     function handleInbox(scene, p) {
@@ -104,38 +107,33 @@
         const annots = Array.from(scene.querySelectorAll('.db-annot'));
         const heading = scene.querySelector('.db-scene-heading');
 
-        // Window slides up and rotates as it enters
-        const enter = range(p, 0, 0.25);
-        const exit = range(p, 0.8, 1);
-        if (win) {
-            const rx = lerp(18, 4, enter);
-            const ry = lerp(-10, -2, enter);
-            const ty = lerp(80, 0, enter) + exit * -40;
-            const sc = lerp(0.9, 1, enter) * (1 - exit * 0.05);
-            const op = enter * (1 - exit);
-            win.style.transform = `translateY(${ty}px) rotateX(${rx}deg) rotateY(${ry}deg) scale(${sc})`;
-            win.style.opacity = op;
-        }
+        const enter = range(p, -0.7, -0.15);
         if (heading) {
-            heading.style.opacity = enter * (1 - exit);
+            heading.style.opacity = enter;
             heading.style.transform = `translateY(${lerp(20, 0, enter)}px)`;
         }
+        if (win) {
+            const rx = lerp(14, 3, enter);
+            const ry = lerp(-8, -2, enter);
+            const ty = lerp(60, 0, enter);
+            const sc = lerp(0.92, 1, enter);
+            win.style.transform = `translateY(${ty}px) rotateX(${rx}deg) rotateY(${ry}deg) scale(${sc})`;
+            win.style.opacity = enter;
+        }
 
-        // Rows cascade as scroll progresses (0.2 → 0.6)
-        const rowStart = 0.15;
-        const rowEnd = 0.55;
+        // Rows cascade with a baseline from the window's enter (never fully invisible)
         rows.forEach((row, i) => {
-            const per = rowStart + (i / rows.length) * (rowEnd - rowStart);
-            const r = range(p, per, per + 0.08);
-            row.style.opacity = r * (1 - exit);
+            const per = -0.4 + (i / Math.max(rows.length, 1)) * 0.35;
+            const r = range(p, per, per + 0.14);
+            row.style.opacity = Math.max(r, enter * 0.6);
             row.style.transform = `translateX(${lerp(-20, 0, r)}px)`;
         });
 
-        // Annotations pop in sequentially after rows
+        // Annotations pop during sticky after rows settle
         annots.forEach((a, i) => {
-            const per = 0.6 + i * 0.06;
-            const r = range(p, per, per + 0.08);
-            a.style.opacity = r * (1 - exit);
+            const per = 0.15 + i * 0.08;
+            const r = range(p, per, per + 0.14);
+            a.style.opacity = r;
             a.style.transform = `translateY(${lerp(10, 0, r)}px)`;
         });
     }
@@ -146,26 +144,24 @@
         const vs = scene.querySelector('.db-diff-vs');
         const heading = scene.querySelector('.db-scene-heading');
 
-        const enter = range(p, 0, 0.3);
-        const exit  = range(p, 0.75, 1);
-
+        const enter = range(p, -0.7, -0.15);
         if (heading) {
-            heading.style.opacity = enter * (1 - exit);
+            heading.style.opacity = enter;
             heading.style.transform = `translateY(${lerp(20, 0, enter)}px)`;
         }
         if (safe) {
-            const r = range(p, 0.1, 0.4);
-            safe.style.opacity = r * (1 - exit);
+            const r = range(p, -0.55, -0.1);
+            safe.style.opacity = r;
             safe.style.transform = `translateX(${lerp(-40, 0, r)}px)`;
         }
         if (danger) {
-            const r = range(p, 0.25, 0.55);
-            danger.style.opacity = r * (1 - exit);
+            const r = range(p, -0.35, 0.1);
+            danger.style.opacity = r;
             danger.style.transform = `translateX(${lerp(40, 0, r)}px)`;
         }
         if (vs) {
-            const r = range(p, 0.45, 0.6);
-            vs.style.opacity = r * (1 - exit);
+            const r = range(p, -0.2, 0.15);
+            vs.style.opacity = r;
             vs.style.transform = `scale(${lerp(0.6, 1, r)})`;
         }
     }
@@ -176,47 +172,38 @@
         const cursor = scene.querySelector('.db-cursor');
         const heading = scene.querySelector('.db-scene-heading');
 
-        const enter = range(p, 0, 0.25);
-        const exit = range(p, 0.8, 1);
-
+        const enter = range(p, -0.7, -0.15);
         if (heading) {
-            heading.style.opacity = enter * (1 - exit);
+            heading.style.opacity = enter;
             heading.style.transform = `translateY(${lerp(20, 0, enter)}px)`;
         }
         if (preview) {
-            preview.style.opacity = enter * (1 - exit);
-            preview.style.transform = `translateY(${lerp(20, 0, enter)}px) scale(${lerp(0.95, 1, enter)})`;
+            preview.style.opacity = enter;
+            preview.style.transform = `translateY(${lerp(20, 0, enter)}px) scale(${lerp(0.96, 1, enter)})`;
+            preview.style.filter = '';
         }
-
-        // Cursor moves from outside into the link over 0.25 → 0.45
         if (cursor) {
-            const cr = range(p, 0.25, 0.45);
+            const cr = range(p, -0.1, 0.25);
             cursor.style.opacity = cr;
             const x = lerp(-160, 40, cr);
             const y = lerp(120, 0, cr);
             cursor.style.transform = `translate(${x}px, ${y}px)`;
         }
-
-        // Actual URL reveals at 0.45 → 0.6
         if (actualWrap) {
-            const ar = range(p, 0.45, 0.62);
+            const ar = range(p, 0.1, 0.45);
             actualWrap.style.opacity = ar;
             actualWrap.style.transform = `translate(-50%, ${lerp(-10, 0, ar)}px)`;
         }
-
-        // Glitch at 0.7
-        if (p > 0.7 && !clickTriggered && !prefersReducedMotion) {
+        // One-shot glitch past the click moment
+        if (p > 0.65 && !clickTriggered && !prefersReducedMotion) {
             clickTriggered = true;
             if (glitch) {
                 glitch.classList.remove('on');
-                // force reflow
                 void glitch.offsetWidth;
                 glitch.classList.add('on');
             }
-            if (preview) preview.style.filter = 'blur(2px)';
-        } else if (p < 0.6 && clickTriggered) {
+        } else if (p < 0.5 && clickTriggered) {
             clickTriggered = false;
-            if (preview) preview.style.filter = '';
         }
     }
 
@@ -225,20 +212,18 @@
         const callout = scene.querySelector('.db-browser-callout');
         const heading = scene.querySelector('.db-scene-heading');
 
-        const enter = range(p, 0.05, 0.3);
-        const exit = range(p, 0.8, 1);
-
+        const enter = range(p, -0.7, -0.15);
         if (heading) {
-            heading.style.opacity = enter * (1 - exit);
+            heading.style.opacity = enter;
             heading.style.transform = `translateY(${lerp(20, 0, enter)}px)`;
         }
         if (browser) {
-            browser.style.opacity = enter * (1 - exit);
-            browser.style.transform = `translateY(${lerp(60, 0, enter) + exit * -40}px) scale(${lerp(0.92, 1, enter)})`;
+            browser.style.opacity = enter;
+            browser.style.transform = `translateY(${lerp(60, 0, enter)}px) scale(${lerp(0.94, 1, enter)})`;
         }
         if (callout) {
-            const r = range(p, 0.35, 0.55);
-            callout.style.opacity = r * (1 - exit);
+            const r = range(p, -0.05, 0.25);
+            callout.style.opacity = r;
             callout.style.transform = `translate(-50%, ${lerp(-6, -16, r)}px)`;
         }
     }
@@ -246,17 +231,16 @@
     function handlePopups(scene, p) {
         const popups = Array.from(scene.querySelectorAll('.db-popup'));
         const heading = scene.querySelector('.db-scene-heading');
-        const enter = range(p, 0, 0.2);
-        const exit = range(p, 0.8, 1);
+        const enter = range(p, -0.3, 0);
 
         if (heading) {
-            heading.style.opacity = enter * (1 - exit);
+            heading.style.opacity = enter;
             heading.style.transform = `translateY(${lerp(20, 0, enter)}px)`;
         }
 
         popups.forEach((pop, i) => {
-            const start = 0.12 + i * 0.1;
-            const end = start + 0.14;
+            const start = -0.5 + i * 0.1;
+            const end = start + 0.22;
             const r = range(p, start, end);
             const baseX = parseFloat(pop.dataset.x || 0);
             const baseY = parseFloat(pop.dataset.y || 0);
@@ -265,32 +249,34 @@
             const fromY = parseFloat(pop.dataset.fromY || 300);
             const tx = lerp(fromX, baseX, r);
             const ty = lerp(fromY, baseY, r);
-            pop.style.opacity = r * (1 - exit);
-            pop.style.transform = `translate(${tx}px, ${ty}px) rotate(${baseR}deg) scale(${lerp(0.9, 1, r)})`;
+            pop.style.opacity = r;
+            pop.style.transform = `translate(${tx}px, ${ty}px) rotate(${baseR}deg) scale(${lerp(0.92, 1, r)})`;
         });
     }
 
     function handlePsych(scene, p) {
         const words = Array.from(scene.querySelectorAll('.db-psych-word'));
         const caption = scene.querySelector('.db-psych-caption');
-        const exit = range(p, 0.85, 1);
 
+        // Words light up in sequence but all remain present (vertical stack).
+        // Each word has a baseline opacity so we never see an empty viewport.
         words.forEach((w, i) => {
-            const start = 0.08 + i * 0.16;
-            const end = start + 0.1;
-            const r = range(p, start, end);
-            // A word stays "active" for its window, fades before the next one hits
-            const next = 0.08 + (i + 1) * 0.16;
-            const fadeOut = range(p, next - 0.02, next + 0.06);
-            const opacity = lerp(0.1, 1, r) * (1 - fadeOut * 0.7) * (1 - exit);
-            w.style.opacity = opacity;
-            w.classList.toggle('active', r > 0.5 && fadeOut < 0.5);
-            w.style.transform = `translateY(${lerp(30, 0, r)}px) scale(${lerp(0.9, 1, r)})`;
+            const count = words.length;
+            const start = 0.05 + (i / count) * 0.75;
+            const end = start + 0.12;
+            const peak = range(p, start, end);
+            const sustain = range(p, end, end + 0.14);
+            // Baseline from 0.1 (pre-enter) ramping to visible throughout
+            const base = lerp(0.15, 0.4, range(p, -0.3, 0));
+            const activeBoost = peak * (1 - sustain * 0.5);
+            w.style.opacity = Math.max(base, activeBoost + base * 0.6);
+            w.classList.toggle('active', peak > 0.5 && sustain < 0.5);
+            w.style.transform = `translateY(${lerp(24, 0, Math.max(peak, range(p, -0.2, 0)))}px)`;
         });
 
         if (caption) {
-            const r = range(p, 0.05, 0.18);
-            caption.style.opacity = r * (1 - exit);
+            const r = range(p, -0.1, 0.15);
+            caption.style.opacity = r;
             caption.style.transform = `translate(-50%, ${lerp(10, 0, r)}px)`;
         }
     }
@@ -298,18 +284,17 @@
     function handleSigns(scene, p) {
         const signs = Array.from(scene.querySelectorAll('.db-sign'));
         const heading = scene.querySelector('.db-scene-heading');
-        const enter = range(p, 0, 0.2);
-        const exit = range(p, 0.85, 1);
+        const enter = range(p, -0.7, -0.15);
 
         if (heading) {
-            heading.style.opacity = enter * (1 - exit);
+            heading.style.opacity = enter;
             heading.style.transform = `translateY(${lerp(20, 0, enter)}px)`;
         }
 
         signs.forEach((s, i) => {
-            const start = 0.15 + i * 0.1;
-            const r = range(p, start, start + 0.15);
-            s.style.opacity = r * (1 - exit);
+            const start = -0.55 + i * 0.1;
+            const r = range(p, start, start + 0.2);
+            s.style.opacity = r;
             s.style.transform = `translateY(${lerp(40, 0, r)}px)`;
         });
     }
@@ -317,18 +302,17 @@
     function handlePlaybook(scene, p) {
         const rules = Array.from(scene.querySelectorAll('.db-rule'));
         const heading = scene.querySelector('.db-scene-heading');
-        const enter = range(p, 0, 0.2);
-        const exit = range(p, 0.85, 1);
+        const enter = range(p, -0.7, -0.15);
 
         if (heading) {
-            heading.style.opacity = enter * (1 - exit);
+            heading.style.opacity = enter;
             heading.style.transform = `translateY(${lerp(20, 0, enter)}px)`;
         }
 
         rules.forEach((r, i) => {
-            const start = 0.15 + i * 0.1;
-            const prog = range(p, start, start + 0.12);
-            r.style.opacity = prog * (1 - exit);
+            const start = -0.55 + i * 0.1;
+            const prog = range(p, start, start + 0.2);
+            r.style.opacity = prog;
             r.style.transform = `translateX(${lerp(-30, 0, prog)}px)`;
         });
     }
@@ -339,11 +323,10 @@
         const actions = scene.querySelector('.db-cta-actions');
         const footnote = scene.querySelector('.db-cta-footnote');
 
-        const enter = range(p, 0, 0.35);
         [display, sub, actions, footnote].forEach((el, i) => {
             if (!el) return;
-            const start = 0.05 + i * 0.08;
-            const r = range(p, start, start + 0.2);
+            const start = -0.55 + i * 0.08;
+            const r = range(p, start, start + 0.25);
             el.style.opacity = r;
             el.style.transform = `translateY(${lerp(30, 0, r)}px)`;
         });
@@ -355,16 +338,14 @@
             const scene = scenes[i];
             if (!scene) return;
             window.scrollTo({
-                top: scene.offsetTop + 80,
+                top: scene.offsetTop + 20,
                 behavior: prefersReducedMotion ? 'auto' : 'smooth'
             });
         });
     });
 
-    // Initial paint + listener
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
     onScroll();
-    // Also run once more after fonts settle
     requestAnimationFrame(() => requestAnimationFrame(tick));
 })();
