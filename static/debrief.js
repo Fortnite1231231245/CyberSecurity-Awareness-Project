@@ -55,10 +55,10 @@
     }
 
     // ----- Momentum-scroll state -----
-    const DAMPING = 0.075;           // lower = longer coast
-    const WHEEL_MULTIPLIER = 0.9;    // scale per-tick scroll distance
-    const KEY_STEP_PX = () => window.innerHeight * 0.18; // arrow keys
-    const PAGE_STEP_PX = () => window.innerHeight * 0.9; // space / pgup-pgdn
+    const DAMPING = 0.045;           // lower = longer coast (~1s)
+    const WHEEL_MULTIPLIER = 1.4;    // scale per-tick target increment (bigger glide per tick)
+    const KEY_STEP_PX = () => window.innerHeight * 0.22;
+    const PAGE_STEP_PX = () => window.innerHeight * 1.0;
 
     let targetY = window.scrollY;
     let currentY = targetY;
@@ -79,11 +79,14 @@
     }
 
     function onWheel(e) {
-        // preventDefault only for vertical wheel — let horizontal scroll / pinch pass
-        if (e.ctrlKey) return;          // user is zooming; don't intercept
+        if (e.ctrlKey) return;          // user is zooming
         e.preventDefault();
+        // Normalize deltaMode: 0 = pixels, 1 = lines (~16px), 2 = pages
+        let px = e.deltaY;
+        if (e.deltaMode === 1) px *= 16;
+        else if (e.deltaMode === 2) px *= window.innerHeight;
         userControlled = true;
-        setTarget(targetY + e.deltaY * WHEEL_MULTIPLIER, false);
+        setTarget(targetY + px * WHEEL_MULTIPLIER, false);
     }
 
     function onKeydown(e) {
@@ -219,9 +222,12 @@
             row.style.transform = `translate3d(${lerp(-12, 0, r)}px, 0, 0)`;
         });
 
+        // Annotations appear one by one across the sticky phase — each is a callout
+        // the user needs time to read, so we spread them out.
+        const annotN = annots.length;
         annots.forEach((a, i) => {
-            const per = 0.1 + i * 0.1;
-            const r = range(p, per, per + 0.22);
+            const per = 0.1 + (i / annotN) * 0.7;
+            const r = range(p, per, per + 0.25);
             a.style.opacity = r;
             a.style.transform = `translate3d(0, ${lerp(10, 0, r)}px, 0)`;
         });
@@ -333,8 +339,11 @@
             heading.style.transform = `translate3d(0, ${lerp(20, 0, enter) + parallax * 0.5}px, 0)`;
         }
 
+        // Stretch reveals across nearly the full sticky phase so the user
+        // continuously sees new popups land as they scroll through the scene.
+        const popN = popups.length;
         popups.forEach((pop, i) => {
-            const start = -0.6 + i * 0.12;
+            const start = -0.25 + (i / popN) * 0.9;   // 0: -0.25, 3: 0.425 (for n=4)
             const end = start + 0.35;
             const r = range(p, start, end);
             const baseX = parseFloat(pop.dataset.x || 0);
@@ -394,9 +403,11 @@
             heading.style.transform = `translate3d(0, ${lerp(20, 0, enter) + parallax * 0.5}px, 0)`;
         }
 
+        // Stretch across the sticky phase so each sign lands as user scrolls
+        const signN = signs.length;
         signs.forEach((s, i) => {
-            const start = -0.7 + i * 0.14;
-            const r = range(p, start, start + 0.3);
+            const start = -0.3 + (i / signN) * 0.9;
+            const r = range(p, start, start + 0.35);
             s.style.opacity = r;
             s.style.transform = `translate3d(0, ${lerp(30, 0, r) + parallax * 0.3}px, 0)`;
         });
@@ -413,9 +424,10 @@
             heading.style.transform = `translate3d(0, ${lerp(20, 0, enter) + parallax * 0.5}px, 0)`;
         }
 
+        const ruleN = rules.length;
         rules.forEach((r, i) => {
-            const start = -0.7 + i * 0.14;
-            const prog = range(p, start, start + 0.3);
+            const start = -0.3 + (i / ruleN) * 0.9;
+            const prog = range(p, start, start + 0.35);
             r.style.opacity = prog;
             r.style.transform = `translate3d(${lerp(-18, 0, prog)}px, ${parallax * 0.3}px, 0)`;
         });
@@ -461,7 +473,8 @@
     window.addEventListener('scroll', onNativeScroll, { passive: true });
 
     if (useHijack) {
-        window.addEventListener('wheel', onWheel, { passive: false });
+        // Attach to document — more reliable than window for preventDefault on some browsers
+        document.addEventListener('wheel', onWheel, { passive: false });
         window.addEventListener('keydown', onKeydown);
     }
 

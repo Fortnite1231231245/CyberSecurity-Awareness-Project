@@ -30,7 +30,10 @@ body.db-body {
     margin: 0;
     padding: 0;
     min-height: 100vh;
+    /* Prevent browser-level bounce/pull-to-refresh from fighting the momentum lerp */
+    overscroll-behavior: none;
 }
+html:has(body.db-body) { overscroll-behavior: none; }
 
 /* ----- Fixed ambient layers ----- */
 .db-bg-grid {
