@@ -706,14 +706,14 @@ html:has(body.db-body) { overscroll-behavior: none; }
     font-weight: 600;
 }
 
-/* ----- SCENE 6: psychology words — one-at-a-time crossfade ----- */
+/* ----- SCENE 6: psychology words — vertical list ----- */
 .db-psych {
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: clamp(32px, 6vh, 72px);
+    gap: clamp(24px, 4vh, 48px);
     text-align: center;
     padding: 0 24px;
 }
@@ -729,31 +729,32 @@ html:has(body.db-body) { overscroll-behavior: none; }
     color: var(--db-danger);
     font-weight: 500;
     will-change: opacity, transform;
+    opacity: 0;
 }
 .db-psych-eyebrow .dot {
     width: 5px; height: 5px; border-radius: 50%;
     background: var(--db-danger);
     box-shadow: 0 0 8px var(--db-danger);
 }
-.db-psych-stack {
-    position: relative;
-    width: 100%;
-    max-width: 1200px;
-    height: clamp(120px, 22vh, 260px);
+.db-psych-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(2px, 0.5vh, 10px);
 }
 .db-psych-word {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    font-size: clamp(56px, 13vw, 210px);
-    line-height: 0.92;
+    font-size: clamp(40px, 8vw, 108px);
+    line-height: 1.02;
     letter-spacing: -0.045em;
     font-weight: 800;
     color: var(--db-ink);
     white-space: nowrap;
     will-change: opacity, transform;
     opacity: 0;
+    margin: 0;
 }
 .db-psych-word.hot {
     color: var(--db-danger);
@@ -766,6 +767,11 @@ html:has(body.db-body) { overscroll-behavior: none; }
     line-height: 1.55;
     margin: 0;
     will-change: opacity, transform;
+    opacity: 0;
+}
+
+@media (max-width: 640px) {
+    .db-psych-word { font-size: clamp(34px, 10vw, 72px); }
 }
 
 /* ----- SCENE 7: missed signs ----- */

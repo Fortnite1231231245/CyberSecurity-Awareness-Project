@@ -1,17 +1,16 @@
-// Debrief — cinematic scroll engine with synthesized momentum.
+// Debrief — cinematic scroll engine with synthesized desktop momentum.
 //
-// On desktop, wheel + keyboard events feed a `targetY` scroll position. A
-// continuous rAF loop lerps `currentY` toward `targetY` with low damping and
-// applies it via window.scrollTo, so the real scroll coasts to a stop after
-// the user releases input (Lenis-style). Native scrollbar, position: sticky,
-// and keyboard accessibility all remain functional because we're still
-// writing to the browser's actual scroll position.
+// Core model:
+//   - target: where the user wants to scroll (fed by wheel / keys / dot nav)
+//   - current: where we've actually scrolled the page to this frame (lerped)
+//   - On each rAF frame: lerp current toward target, then window.scrollTo(0, current).
+//   - Drift detection: if window.scrollY diverges from current by more than a
+//     threshold, adopt it (user dragged scrollbar or browser restored scroll).
 //
-// Touch devices and reduced-motion users get native scroll.
+// Desktop only. Touch devices and prefers-reduced-motion get native scroll.
 
 (() => {
     const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    // "hover:none and pointer:coarse" is the reliable signal for touch-primary
     const isTouchPrimary = matchMedia('(hover: none) and (pointer: coarse)').matches;
     const useHijack = !prefersReducedMotion && !isTouchPrimary;
 
@@ -43,26 +42,32 @@
         return smoothstep(clamp01((p - start) / (end - start)));
     }
 
-    // ----- Scene offsets (document coords) -----
+    // ----- Scene offsets (recomputed on resize / font-load) -----
     const sceneInfo = scenes.map(scene => ({
         el: scene,
-        offsetTop: scene.getBoundingClientRect().top + window.scrollY,
+        offsetTop: 0,
+        height: 0,
     }));
-    function refreshOffsets() {
+    function refreshLayout() {
         sceneInfo.forEach(info => {
-            info.offsetTop = info.el.getBoundingClientRect().top + window.scrollY;
+            const rect = info.el.getBoundingClientRect();
+            info.offsetTop = rect.top + window.scrollY;
+            info.height = info.el.offsetHeight;
         });
     }
+    refreshLayout();
 
-    // ----- Momentum-scroll state -----
-    const DAMPING = 0.045;           // lower = longer coast (~1s)
-    const WHEEL_MULTIPLIER = 1.4;    // scale per-tick target increment (bigger glide per tick)
-    const KEY_STEP_PX = () => window.innerHeight * 0.22;
-    const PAGE_STEP_PX = () => window.innerHeight * 1.0;
+    // ----- Momentum state -----
+    // A wheel tick of deltaY = 100px becomes a target-delta of ~200px. The lerp
+    // then carries the scroll over ~1.3s at 60fps, producing an obvious coast.
+    const DAMPING = 0.07;            // 0.07 per frame ≈ ~950ms to reach 99%
+    const WHEEL_MULTIPLIER = 1.8;
+    const KEY_STEP = () => window.innerHeight * 0.25;
+    const PAGE_STEP = () => window.innerHeight * 0.95;
+    const DRIFT_THRESHOLD = 6;       // px divergence that counts as external scroll
 
-    let targetY = window.scrollY;
-    let currentY = targetY;
-    let userControlled = false;  // set true while we own the scroll position
+    let target = window.scrollY;
+    let current = target;
     let maxScroll = 0;
 
     function recomputeMaxScroll() {
@@ -70,92 +75,74 @@
     }
     recomputeMaxScroll();
 
-    function setTarget(y, snap) {
-        targetY = clamp(y, 0, maxScroll);
-        if (snap) {
-            currentY = targetY;
-            window.scrollTo(0, currentY);
-        }
-    }
-
     function onWheel(e) {
-        if (e.ctrlKey) return;          // user is zooming
+        if (e.ctrlKey) return;                 // let pinch-zoom through
         e.preventDefault();
-        // Normalize deltaMode: 0 = pixels, 1 = lines (~16px), 2 = pages
         let px = e.deltaY;
         if (e.deltaMode === 1) px *= 16;
         else if (e.deltaMode === 2) px *= window.innerHeight;
-        userControlled = true;
-        setTarget(targetY + px * WHEEL_MULTIPLIER, false);
+        target = clamp(target + px * WHEEL_MULTIPLIER, 0, maxScroll);
     }
 
     function onKeydown(e) {
-        // Only hijack when focus isn't on an input
         const tag = (e.target && e.target.tagName) || '';
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target && e.target.isContentEditable)) return;
         let delta = 0;
         switch (e.key) {
-            case 'ArrowDown':  delta = KEY_STEP_PX(); break;
-            case 'ArrowUp':    delta = -KEY_STEP_PX(); break;
-            case 'PageDown':   delta = PAGE_STEP_PX(); break;
-            case 'PageUp':     delta = -PAGE_STEP_PX(); break;
-            case ' ':          delta = e.shiftKey ? -PAGE_STEP_PX() : PAGE_STEP_PX(); break;
-            case 'Home':       e.preventDefault(); userControlled = true; setTarget(0, false); return;
-            case 'End':        e.preventDefault(); userControlled = true; setTarget(maxScroll, false); return;
+            case 'ArrowDown':  delta = KEY_STEP(); break;
+            case 'ArrowUp':    delta = -KEY_STEP(); break;
+            case 'PageDown':   delta = PAGE_STEP(); break;
+            case 'PageUp':     delta = -PAGE_STEP(); break;
+            case ' ':          delta = e.shiftKey ? -PAGE_STEP() : PAGE_STEP(); break;
+            case 'Home':       e.preventDefault(); target = 0; return;
+            case 'End':        e.preventDefault(); target = maxScroll; return;
             default: return;
         }
         e.preventDefault();
-        userControlled = true;
-        setTarget(targetY + delta, false);
+        target = clamp(target + delta, 0, maxScroll);
     }
 
-    // If the browser itself changes scroll (tab focus, find, scroll restoration),
-    // gently adopt that position rather than snap back.
-    function onNativeScroll() {
-        if (!userControlled) {
-            const y = window.scrollY;
-            if (Math.abs(y - currentY) > 4) {
-                currentY = y;
-                targetY = y;
-            }
-        }
-    }
-
-    // ----- rAF loop -----
+    // ----- Main rAF loop -----
     let clickTriggered = false;
     let lastActiveIdx = -1;
 
     function loop() {
+        recomputeMaxScroll();
+
         if (useHijack) {
-            const delta = targetY - currentY;
-            if (Math.abs(delta) < 0.2) {
-                currentY = targetY;
-                if (userControlled && Math.abs(window.scrollY - currentY) > 0.5) {
-                    window.scrollTo(0, currentY);
-                }
-                userControlled = false;
-            } else {
-                currentY += delta * DAMPING;
-                window.scrollTo(0, currentY);
+            // Drift detect: something other than our scrollTo moved the page
+            // (scrollbar drag, find-in-page, browser restore). Adopt it.
+            const drift = window.scrollY - current;
+            if (Math.abs(drift) > DRIFT_THRESHOLD) {
+                current = window.scrollY;
+                target = window.scrollY;
+            }
+
+            const delta = target - current;
+            if (Math.abs(delta) > 0.1) {
+                current += delta * DAMPING;
+                window.scrollTo(0, current);
+            } else if (current !== target) {
+                current = target;
+                window.scrollTo(0, current);
             }
         } else {
-            currentY = window.scrollY;
+            current = window.scrollY;
         }
 
         const vh = window.innerHeight;
-        const scrollY = currentY;
+        const scrollY = current;
 
         // Progress bar
-        const docH = maxScroll;
-        const pct = docH > 0 ? clamp01(scrollY / docH) : 0;
+        const pct = maxScroll > 0 ? clamp01(scrollY / maxScroll) : 0;
         if (progressBar) progressBar.style.width = (pct * 100).toFixed(2) + '%';
 
         let activeIdx = 0;
         sceneInfo.forEach((info, i) => {
             const top = info.offsetTop - scrollY;
-            const height = info.el.offsetHeight;
-            let p;
+            const height = info.height;
             const total = height - vh;
+            let p;
             if (top <= 0) {
                 p = total > 0 ? clamp01(-top / total) : 1;
             } else {
@@ -176,8 +163,9 @@
     }
 
     // ----- Scene handlers -----
-    // Content fades in during pre-entry (p ∈ [-0.9, -0.1]), stays fully visible
-    // through sticky phase. No exit fades — stage scroll-out handles the handoff.
+    // Convention: fade in during pre-entry (p ∈ [-0.85, -0.1]), stay through
+    // sticky. Per-item staggers span most of the sticky phase so scrolling
+    // continuously reveals content.
 
     function handleIntro(scene, p) {
         const display = scene.querySelector('.db-display');
@@ -215,6 +203,7 @@
             win.style.opacity = enter;
         }
 
+        // Rows reveal quickly as the window lands — 10 emails is the beat
         rows.forEach((row, i) => {
             const per = -0.5 + (i / Math.max(rows.length, 1)) * 0.5;
             const r = range(p, per, per + 0.22);
@@ -222,12 +211,11 @@
             row.style.transform = `translate3d(${lerp(-12, 0, r)}px, 0, 0)`;
         });
 
-        // Annotations appear one by one across the sticky phase — each is a callout
-        // the user needs time to read, so we spread them out.
+        // Annotations: callouts the user needs to read. Spread across sticky.
         const annotN = annots.length;
         annots.forEach((a, i) => {
-            const per = 0.1 + (i / annotN) * 0.7;
-            const r = range(p, per, per + 0.25);
+            const start = 0.0 + (i / annotN) * 0.6;
+            const r = range(p, start, start + 0.22);
             a.style.opacity = r;
             a.style.transform = `translate3d(0, ${lerp(10, 0, r)}px, 0)`;
         });
@@ -339,12 +327,13 @@
             heading.style.transform = `translate3d(0, ${lerp(20, 0, enter) + parallax * 0.5}px, 0)`;
         }
 
-        // Stretch reveals across nearly the full sticky phase so the user
-        // continuously sees new popups land as they scroll through the scene.
+        // Popups reveal in sequence so the user continuously sees new scams
+        // land. All four settle by p ~= 0.6, leaving ~40% of sticky for the
+        // user to read the full swarm before moving on.
         const popN = popups.length;
         popups.forEach((pop, i) => {
-            const start = -0.25 + (i / popN) * 0.9;   // 0: -0.25, 3: 0.425 (for n=4)
-            const end = start + 0.35;
+            const start = -0.2 + (i / popN) * 0.6;    // 0:-0.2, 3:0.25
+            const end = start + 0.3;                   // 3 finishes at 0.55
             const r = range(p, start, end);
             const baseX = parseFloat(pop.dataset.x || 0);
             const baseY = parseFloat(pop.dataset.y || 0);
@@ -359,36 +348,34 @@
     }
 
     function handlePsych(scene, p) {
+        // Vertical list — each word is in normal document flow and animates
+        // independently. No overlapping absolute layers, no crossfade races.
         const words = Array.from(scene.querySelectorAll('.db-psych-word'));
         const caption = scene.querySelector('.db-psych-caption');
         const eyebrow = scene.querySelector('.db-psych-eyebrow');
         const n = words.length;
-
-        const startP = 0.03;
-        const endP = 0.95;
-        const span = endP - startP;
-        const slot = span / n;
-        const halfWidth = slot * 0.95; // wider crossfade so words breathe
-
-        words.forEach((w, i) => {
-            const peak = startP + (i + 0.5) * slot;
-            const distance = Math.abs(p - peak);
-            const raw = clamp01(1 - distance / halfWidth);
-            const vis = smoothstep(raw);
-            const scale = lerp(0.9, 1, vis);
-            const ty = lerp(14, 0, vis);
-            w.style.opacity = vis;
-            w.style.transform = `translate3d(0, ${ty}px, 0) scale(${scale})`;
-        });
 
         const framing = range(p, -0.7, -0.1);
         if (eyebrow) {
             eyebrow.style.opacity = framing;
             eyebrow.style.transform = `translate3d(0, ${lerp(12, 0, framing)}px, 0)`;
         }
+
+        // Each word: fade + subtle rise as user scrolls through its slot.
+        // Spread across the sticky phase so scrolling continuously reveals.
+        words.forEach((w, i) => {
+            const start = -0.1 + (i / n) * 0.65;   // word 0: -0.1, word 4: 0.42
+            const end = start + 0.25;
+            const vis = range(p, start, end);
+            w.style.opacity = vis;
+            w.style.transform = `translate3d(0, ${lerp(28, 0, vis)}px, 0)`;
+        });
+
+        // Caption lands after all words are up — a summary
         if (caption) {
-            caption.style.opacity = framing;
-            caption.style.transform = `translate3d(0, ${lerp(12, 0, framing)}px, 0)`;
+            const capR = range(p, 0.6, 0.85);
+            caption.style.opacity = capR;
+            caption.style.transform = `translate3d(0, ${lerp(16, 0, capR)}px, 0)`;
         }
     }
 
@@ -403,11 +390,10 @@
             heading.style.transform = `translate3d(0, ${lerp(20, 0, enter) + parallax * 0.5}px, 0)`;
         }
 
-        // Stretch across the sticky phase so each sign lands as user scrolls
         const signN = signs.length;
         signs.forEach((s, i) => {
-            const start = -0.3 + (i / signN) * 0.9;
-            const r = range(p, start, start + 0.35);
+            const start = -0.25 + (i / signN) * 0.7;
+            const r = range(p, start, start + 0.3);
             s.style.opacity = r;
             s.style.transform = `translate3d(0, ${lerp(30, 0, r) + parallax * 0.3}px, 0)`;
         });
@@ -426,8 +412,8 @@
 
         const ruleN = rules.length;
         rules.forEach((r, i) => {
-            const start = -0.3 + (i / ruleN) * 0.9;
-            const prog = range(p, start, start + 0.35);
+            const start = -0.25 + (i / ruleN) * 0.7;
+            const prog = range(p, start, start + 0.3);
             r.style.opacity = prog;
             r.style.transform = `translate3d(${lerp(-18, 0, prog)}px, ${parallax * 0.3}px, 0)`;
         });
@@ -448,17 +434,17 @@
         });
     }
 
-    // ----- Dot nav: feed targetY so it uses the same momentum system -----
+    // ----- Dot nav — feeds target so it coasts through the same system -----
     dots.forEach((d, i) => {
         d.addEventListener('click', () => {
             const info = sceneInfo[i];
             if (!info) return;
-            userControlled = true;
+            const dest = clamp(info.offsetTop + 20, 0, maxScroll);
             if (useHijack) {
-                setTarget(info.offsetTop + 20, false);
+                target = dest;
             } else {
                 window.scrollTo({
-                    top: info.offsetTop + 20,
+                    top: dest,
                     behavior: prefersReducedMotion ? 'auto' : 'smooth'
                 });
             }
@@ -467,24 +453,26 @@
 
     // ----- Bindings -----
     window.addEventListener('resize', () => {
-        refreshOffsets();
+        refreshLayout();
         recomputeMaxScroll();
     }, { passive: true });
-    window.addEventListener('scroll', onNativeScroll, { passive: true });
 
     if (useHijack) {
-        // Attach to document — more reliable than window for preventDefault on some browsers
         document.addEventListener('wheel', onWheel, { passive: false });
         window.addEventListener('keydown', onKeydown);
     }
 
     if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(() => {
-            refreshOffsets();
+            refreshLayout();
             recomputeMaxScroll();
         });
     }
+    // One more refresh after layout likely settles
+    window.addEventListener('load', () => {
+        refreshLayout();
+        recomputeMaxScroll();
+    });
 
-    // Kick off
     requestAnimationFrame(loop);
 })();
