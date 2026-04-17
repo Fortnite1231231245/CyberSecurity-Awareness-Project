@@ -1,7 +1,6 @@
 // Debrief — scroll-driven cinematic engine.
-// Each scene is a sticky stage with a tall scroll track. Content appears as the
-// scene approaches (pre-entry), stays fully visible while sticky, and scrolls
-// naturally out the top as the next scene's stage slides in.
+// Continuous rAF loop with lightly damped scroll. Each scene is a sticky stage
+// with a tall scroll track. Animations use smoothstep easing for soft transitions.
 
 (() => {
     const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -24,81 +23,111 @@
         'cta'     : handleCta,
     };
 
-    let rafPending = false;
-    let lastScrollY = 0;
-    let clickTriggered = false;
-
-    function onScroll() {
-        lastScrollY = window.scrollY;
-        if (!rafPending) {
-            rafPending = true;
-            requestAnimationFrame(tick);
-        }
-    }
-
-    // Progress range: -1 (scene's top one viewport below = just entering bottom)
-    // 0 (scene's top at viewport top = sticky just activated)
-    // 1 (scene's bottom at viewport bottom = about to unstick)
-    function computeProgress(scene, vh) {
-        const rect = scene.getBoundingClientRect();
-        const total = rect.height - vh;
-        if (rect.top <= 0) {
-            if (total <= 0) return 1;
-            return Math.min(1, Math.max(0, -rect.top / total));
-        }
-        // Pre-entry: rect.top in (0, vh]
-        return -Math.min(1, rect.top / vh);
-    }
-
-    function tick() {
-        rafPending = false;
-
-        const docH = document.documentElement.scrollHeight - window.innerHeight;
-        const pct = docH > 0 ? Math.max(0, Math.min(1, lastScrollY / docH)) : 0;
-        if (progressBar) progressBar.style.width = (pct * 100).toFixed(2) + '%';
-
-        const vh = window.innerHeight;
-        let activeIdx = 0;
-
-        scenes.forEach((scene, i) => {
-            const p = computeProgress(scene, vh);
-            const rect = scene.getBoundingClientRect();
-            if (rect.top <= vh * 0.5 && rect.bottom >= vh * 0.5) activeIdx = i;
-
-            const fn = handlers[scene.dataset.scene];
-            if (fn) fn(scene, p);
-        });
-
-        dots.forEach((d, i) => d.classList.toggle('active', i === activeIdx));
-    }
-
     // ----- Utilities -----
     function lerp(a, b, t) { return a + (b - a) * t; }
     function clamp01(t) { return Math.max(0, Math.min(1, t)); }
-    // Map p from [start, end] to [0, 1], clamped.
+    function smoothstep(t) { t = clamp01(t); return t * t * (3 - 2 * t); }
+    // Map p from [start, end] → [0, 1] with smoothstep easing
     function range(p, start, end) {
         if (end === start) return p >= end ? 1 : 0;
-        return clamp01((p - start) / (end - start));
+        return smoothstep(clamp01((p - start) / (end - start)));
+    }
+
+    // Pre-compute scene offsets (document-relative) so we can use smoothed scroll
+    const sceneInfo = scenes.map(scene => {
+        const rect = scene.getBoundingClientRect();
+        return {
+            el: scene,
+            offsetTop: rect.top + window.scrollY,
+            // recalc on resize
+        };
+    });
+    function refreshOffsets() {
+        sceneInfo.forEach((info, i) => {
+            const rect = info.el.getBoundingClientRect();
+            info.offsetTop = rect.top + window.scrollY;
+        });
+    }
+
+    // ----- Scroll smoothing state -----
+    // Actual page scroll is native and untouched. We interpolate a "visual" scrollY
+    // that trails the real one. Animations read from the visual value, which makes
+    // motion feel damped and cinematic without fighting the browser's scroll.
+    let targetY = window.scrollY;
+    let visualY = targetY;
+    const DAMPING = prefersReducedMotion ? 1 : 0.18;
+
+    // ----- Progress calc -----
+    // Returns p in [-1, 1]. -1 = scene's top one viewport below (just entering from bottom).
+    // 0 = scene's top at viewport top (sticky active). 1 = scene's bottom at viewport bottom.
+    function computeProgress(info, visY, vh) {
+        const top = info.offsetTop - visY;
+        const height = info.el.offsetHeight;
+        const total = height - vh;
+        if (top <= 0) {
+            if (total <= 0) return 1;
+            return Math.min(1, Math.max(0, -top / total));
+        }
+        return -Math.min(1, top / vh);
+    }
+
+    let clickTriggered = false;
+    let lastActiveIdx = -1;
+
+    function loop() {
+        targetY = window.scrollY;
+
+        const delta = targetY - visualY;
+        if (Math.abs(delta) < 0.3) {
+            visualY = targetY;
+        } else {
+            visualY += delta * DAMPING;
+        }
+
+        const vh = window.innerHeight;
+
+        // Global progress bar (based on true scroll for honesty)
+        const docH = document.documentElement.scrollHeight - vh;
+        const pct = docH > 0 ? Math.max(0, Math.min(1, targetY / docH)) : 0;
+        if (progressBar) progressBar.style.width = (pct * 100).toFixed(2) + '%';
+
+        let activeIdx = 0;
+
+        sceneInfo.forEach((info, i) => {
+            const p = computeProgress(info, visualY, vh);
+            const top = info.offsetTop - visualY;
+            if (top <= vh * 0.5 && (top + info.el.offsetHeight) >= vh * 0.5) activeIdx = i;
+
+            const fn = handlers[info.el.dataset.scene];
+            if (fn) fn(info.el, p);
+        });
+
+        if (activeIdx !== lastActiveIdx) {
+            dots.forEach((d, i) => d.classList.toggle('active', i === activeIdx));
+            lastActiveIdx = activeIdx;
+        }
+
+        requestAnimationFrame(loop);
     }
 
     // ----- Scene handlers -----
-    // Convention: content fades IN during p ∈ [-0.4, 0] (pre-entry into sticky).
-    // Content stays fully visible for p ∈ [0, 1]. No exit fade — the scene's
-    // sticky release + next scene's stage handle the transition naturally.
+    // Convention: content fades in during pre-entry (p ∈ [-0.7, -0.15]), stays fully
+    // visible through sticky (p ∈ [0, 1]). No exit fade — the scene's sticky release
+    // and the next scene's stage slide handle the handoff.
 
     function handleIntro(scene, p) {
         const display = scene.querySelector('.db-display');
         const sub = scene.querySelector('.db-intro-sub');
         const hint = scene.querySelector('.db-scroll-hint');
         const eyebrow = scene.querySelector('.db-eyebrow');
-        // Intro is visible immediately on page load (p = 0). Just lift gently.
-        const travel = -Math.max(0, p) * 30;
+        // Always visible at p=0 (page load). Gentle lift as user scrolls through.
+        const lift = -Math.max(0, p) * 40;
         [eyebrow, display, sub].forEach(el => {
             if (!el) return;
             el.style.opacity = 1;
-            el.style.transform = `translateY(${travel}px)`;
+            el.style.transform = `translate3d(0, ${lift}px, 0)`;
         });
-        if (hint) hint.style.opacity = 1 - range(p, 0.15, 0.5);
+        if (hint) hint.style.opacity = 1 - range(p, 0.1, 0.45);
     }
 
     function handleInbox(scene, p) {
@@ -107,34 +136,34 @@
         const annots = Array.from(scene.querySelectorAll('.db-annot'));
         const heading = scene.querySelector('.db-scene-heading');
 
-        const enter = range(p, -0.7, -0.15);
+        const enter = range(p, -0.75, -0.15);
+        const parallax = -Math.max(0, p) * 40;
+
         if (heading) {
             heading.style.opacity = enter;
-            heading.style.transform = `translateY(${lerp(20, 0, enter)}px)`;
+            heading.style.transform = `translate3d(0, ${lerp(20, 0, enter) + parallax * 0.5}px, 0)`;
         }
         if (win) {
-            const rx = lerp(14, 3, enter);
-            const ry = lerp(-8, -2, enter);
-            const ty = lerp(60, 0, enter);
-            const sc = lerp(0.92, 1, enter);
-            win.style.transform = `translateY(${ty}px) rotateX(${rx}deg) rotateY(${ry}deg) scale(${sc})`;
+            const rx = lerp(10, 2, enter);
+            const ry = lerp(-6, -1.5, enter);
+            const ty = lerp(40, 0, enter) + parallax;
+            const sc = lerp(0.96, 1, enter);
+            win.style.transform = `translate3d(0, ${ty}px, 0) rotateX(${rx}deg) rotateY(${ry}deg) scale(${sc})`;
             win.style.opacity = enter;
         }
 
-        // Rows cascade with a baseline from the window's enter (never fully invisible)
         rows.forEach((row, i) => {
             const per = -0.4 + (i / Math.max(rows.length, 1)) * 0.35;
-            const r = range(p, per, per + 0.14);
-            row.style.opacity = Math.max(r, enter * 0.6);
-            row.style.transform = `translateX(${lerp(-20, 0, r)}px)`;
+            const r = range(p, per, per + 0.18);
+            row.style.opacity = Math.max(r, enter * 0.65);
+            row.style.transform = `translate3d(${lerp(-14, 0, r)}px, 0, 0)`;
         });
 
-        // Annotations pop during sticky after rows settle
         annots.forEach((a, i) => {
             const per = 0.15 + i * 0.08;
-            const r = range(p, per, per + 0.14);
+            const r = range(p, per, per + 0.18);
             a.style.opacity = r;
-            a.style.transform = `translateY(${lerp(10, 0, r)}px)`;
+            a.style.transform = `translate3d(0, ${lerp(10, 0, r)}px, 0)`;
         });
     }
 
@@ -144,25 +173,27 @@
         const vs = scene.querySelector('.db-diff-vs');
         const heading = scene.querySelector('.db-scene-heading');
 
-        const enter = range(p, -0.7, -0.15);
+        const enter = range(p, -0.75, -0.15);
+        const parallax = -Math.max(0, p) * 30;
+
         if (heading) {
             heading.style.opacity = enter;
-            heading.style.transform = `translateY(${lerp(20, 0, enter)}px)`;
+            heading.style.transform = `translate3d(0, ${lerp(20, 0, enter) + parallax * 0.5}px, 0)`;
         }
         if (safe) {
-            const r = range(p, -0.55, -0.1);
+            const r = range(p, -0.6, -0.15);
             safe.style.opacity = r;
-            safe.style.transform = `translateX(${lerp(-40, 0, r)}px)`;
+            safe.style.transform = `translate3d(${lerp(-24, 0, r)}px, ${parallax}px, 0)`;
         }
         if (danger) {
-            const r = range(p, -0.35, 0.1);
+            const r = range(p, -0.4, 0.05);
             danger.style.opacity = r;
-            danger.style.transform = `translateX(${lerp(40, 0, r)}px)`;
+            danger.style.transform = `translate3d(${lerp(24, 0, r)}px, ${parallax}px, 0)`;
         }
         if (vs) {
             const r = range(p, -0.2, 0.15);
             vs.style.opacity = r;
-            vs.style.transform = `scale(${lerp(0.6, 1, r)})`;
+            vs.style.transform = `scale(${lerp(0.7, 1, r)})`;
         }
     }
 
@@ -172,37 +203,38 @@
         const cursor = scene.querySelector('.db-cursor');
         const heading = scene.querySelector('.db-scene-heading');
 
-        const enter = range(p, -0.7, -0.15);
+        const enter = range(p, -0.75, -0.15);
+        const parallax = -Math.max(0, p) * 30;
+
         if (heading) {
             heading.style.opacity = enter;
-            heading.style.transform = `translateY(${lerp(20, 0, enter)}px)`;
+            heading.style.transform = `translate3d(0, ${lerp(20, 0, enter) + parallax * 0.5}px, 0)`;
         }
         if (preview) {
             preview.style.opacity = enter;
-            preview.style.transform = `translateY(${lerp(20, 0, enter)}px) scale(${lerp(0.96, 1, enter)})`;
+            preview.style.transform = `translate3d(0, ${lerp(16, 0, enter) + parallax}px, 0) scale(${lerp(0.97, 1, enter)})`;
             preview.style.filter = '';
         }
         if (cursor) {
-            const cr = range(p, -0.1, 0.25);
+            const cr = range(p, -0.1, 0.3);
             cursor.style.opacity = cr;
-            const x = lerp(-160, 40, cr);
-            const y = lerp(120, 0, cr);
-            cursor.style.transform = `translate(${x}px, ${y}px)`;
+            const x = lerp(-140, 40, cr);
+            const y = lerp(100, 0, cr);
+            cursor.style.transform = `translate3d(${x}px, ${y}px, 0)`;
         }
         if (actualWrap) {
-            const ar = range(p, 0.1, 0.45);
+            const ar = range(p, 0.05, 0.4);
             actualWrap.style.opacity = ar;
             actualWrap.style.transform = `translate(-50%, ${lerp(-10, 0, ar)}px)`;
         }
-        // One-shot glitch past the click moment
-        if (p > 0.65 && !clickTriggered && !prefersReducedMotion) {
+        if (p > 0.6 && !clickTriggered && !prefersReducedMotion) {
             clickTriggered = true;
             if (glitch) {
                 glitch.classList.remove('on');
                 void glitch.offsetWidth;
                 glitch.classList.add('on');
             }
-        } else if (p < 0.5 && clickTriggered) {
+        } else if (p < 0.45 && clickTriggered) {
             clickTriggered = false;
         }
     }
@@ -212,14 +244,16 @@
         const callout = scene.querySelector('.db-browser-callout');
         const heading = scene.querySelector('.db-scene-heading');
 
-        const enter = range(p, -0.7, -0.15);
+        const enter = range(p, -0.75, -0.15);
+        const parallax = -Math.max(0, p) * 40;
+
         if (heading) {
             heading.style.opacity = enter;
-            heading.style.transform = `translateY(${lerp(20, 0, enter)}px)`;
+            heading.style.transform = `translate3d(0, ${lerp(20, 0, enter) + parallax * 0.5}px, 0)`;
         }
         if (browser) {
             browser.style.opacity = enter;
-            browser.style.transform = `translateY(${lerp(60, 0, enter)}px) scale(${lerp(0.94, 1, enter)})`;
+            browser.style.transform = `translate3d(0, ${lerp(40, 0, enter) + parallax}px, 0) scale(${lerp(0.96, 1, enter)})`;
         }
         if (callout) {
             const r = range(p, -0.05, 0.25);
@@ -231,16 +265,17 @@
     function handlePopups(scene, p) {
         const popups = Array.from(scene.querySelectorAll('.db-popup'));
         const heading = scene.querySelector('.db-scene-heading');
-        const enter = range(p, -0.3, 0);
+        const enter = range(p, -0.7, -0.15);
+        const parallax = -Math.max(0, p) * 30;
 
         if (heading) {
             heading.style.opacity = enter;
-            heading.style.transform = `translateY(${lerp(20, 0, enter)}px)`;
+            heading.style.transform = `translate3d(0, ${lerp(20, 0, enter) + parallax * 0.5}px, 0)`;
         }
 
         popups.forEach((pop, i) => {
             const start = -0.5 + i * 0.1;
-            const end = start + 0.22;
+            const end = start + 0.28;
             const r = range(p, start, end);
             const baseX = parseFloat(pop.dataset.x || 0);
             const baseY = parseFloat(pop.dataset.y || 0);
@@ -248,72 +283,85 @@
             const fromX = parseFloat(pop.dataset.fromX || -300);
             const fromY = parseFloat(pop.dataset.fromY || 300);
             const tx = lerp(fromX, baseX, r);
-            const ty = lerp(fromY, baseY, r);
+            const ty = lerp(fromY, baseY, r) + parallax;
             pop.style.opacity = r;
-            pop.style.transform = `translate(${tx}px, ${ty}px) rotate(${baseR}deg) scale(${lerp(0.92, 1, r)})`;
+            pop.style.transform = `translate3d(${tx}px, ${ty}px, 0) rotate(${baseR}deg) scale(${lerp(0.94, 1, r)})`;
         });
     }
 
     function handlePsych(scene, p) {
         const words = Array.from(scene.querySelectorAll('.db-psych-word'));
         const caption = scene.querySelector('.db-psych-caption');
+        const eyebrow = scene.querySelector('.db-psych-eyebrow');
+        const n = words.length;
 
-        // Words light up in sequence but all remain present (vertical stack).
-        // Each word has a baseline opacity so we never see an empty viewport.
+        // Crossfade windows: each word's full-visibility moment peaks at its center.
+        // Windows overlap slightly so one fades out while the next fades in.
+        // Words cycle during p ∈ [0.08, 0.92] (within the sticky phase).
+        const startP = 0.05;
+        const endP = 0.92;
+        const span = endP - startP;
+        const slot = span / n;
+        const halfWidth = slot * 0.75; // overlap factor
+
         words.forEach((w, i) => {
-            const count = words.length;
-            const start = 0.05 + (i / count) * 0.75;
-            const end = start + 0.12;
-            const peak = range(p, start, end);
-            const sustain = range(p, end, end + 0.14);
-            // Baseline from 0.1 (pre-enter) ramping to visible throughout
-            const base = lerp(0.15, 0.4, range(p, -0.3, 0));
-            const activeBoost = peak * (1 - sustain * 0.5);
-            w.style.opacity = Math.max(base, activeBoost + base * 0.6);
-            w.classList.toggle('active', peak > 0.5 && sustain < 0.5);
-            w.style.transform = `translateY(${lerp(24, 0, Math.max(peak, range(p, -0.2, 0)))}px)`;
+            const peak = startP + (i + 0.5) * slot;
+            const distance = Math.abs(p - peak);
+            const raw = clamp01(1 - distance / halfWidth);
+            const vis = smoothstep(raw);
+            const scale = lerp(0.88, 1, vis);
+            const ty = lerp(18, 0, vis);
+            w.style.opacity = vis;
+            w.style.transform = `translate3d(0, ${ty}px, 0) scale(${scale})`;
         });
 
+        // Eyebrow and caption: fade in during pre-entry, stay throughout.
+        const framing = range(p, -0.6, -0.1);
+        if (eyebrow) {
+            eyebrow.style.opacity = framing;
+            eyebrow.style.transform = `translate3d(0, ${lerp(12, 0, framing)}px, 0)`;
+        }
         if (caption) {
-            const r = range(p, -0.1, 0.15);
-            caption.style.opacity = r;
-            caption.style.transform = `translate(-50%, ${lerp(10, 0, r)}px)`;
+            caption.style.opacity = framing;
+            caption.style.transform = `translate3d(0, ${lerp(12, 0, framing)}px, 0)`;
         }
     }
 
     function handleSigns(scene, p) {
         const signs = Array.from(scene.querySelectorAll('.db-sign'));
         const heading = scene.querySelector('.db-scene-heading');
-        const enter = range(p, -0.7, -0.15);
+        const enter = range(p, -0.75, -0.15);
+        const parallax = -Math.max(0, p) * 30;
 
         if (heading) {
             heading.style.opacity = enter;
-            heading.style.transform = `translateY(${lerp(20, 0, enter)}px)`;
+            heading.style.transform = `translate3d(0, ${lerp(20, 0, enter) + parallax * 0.5}px, 0)`;
         }
 
         signs.forEach((s, i) => {
             const start = -0.55 + i * 0.1;
-            const r = range(p, start, start + 0.2);
+            const r = range(p, start, start + 0.25);
             s.style.opacity = r;
-            s.style.transform = `translateY(${lerp(40, 0, r)}px)`;
+            s.style.transform = `translate3d(0, ${lerp(30, 0, r) + parallax * 0.3}px, 0)`;
         });
     }
 
     function handlePlaybook(scene, p) {
         const rules = Array.from(scene.querySelectorAll('.db-rule'));
         const heading = scene.querySelector('.db-scene-heading');
-        const enter = range(p, -0.7, -0.15);
+        const enter = range(p, -0.75, -0.15);
+        const parallax = -Math.max(0, p) * 30;
 
         if (heading) {
             heading.style.opacity = enter;
-            heading.style.transform = `translateY(${lerp(20, 0, enter)}px)`;
+            heading.style.transform = `translate3d(0, ${lerp(20, 0, enter) + parallax * 0.5}px, 0)`;
         }
 
         rules.forEach((r, i) => {
             const start = -0.55 + i * 0.1;
-            const prog = range(p, start, start + 0.2);
+            const prog = range(p, start, start + 0.25);
             r.style.opacity = prog;
-            r.style.transform = `translateX(${lerp(-30, 0, prog)}px)`;
+            r.style.transform = `translate3d(${lerp(-20, 0, prog)}px, ${parallax * 0.3}px, 0)`;
         });
     }
 
@@ -326,26 +374,30 @@
         [display, sub, actions, footnote].forEach((el, i) => {
             if (!el) return;
             const start = -0.55 + i * 0.08;
-            const r = range(p, start, start + 0.25);
+            const r = range(p, start, start + 0.3);
             el.style.opacity = r;
-            el.style.transform = `translateY(${lerp(30, 0, r)}px)`;
+            el.style.transform = `translate3d(0, ${lerp(26, 0, r)}px, 0)`;
         });
     }
 
-    // Dot navigation
+    // ----- Navigation -----
     dots.forEach((d, i) => {
         d.addEventListener('click', () => {
-            const scene = scenes[i];
-            if (!scene) return;
+            const info = sceneInfo[i];
+            if (!info) return;
             window.scrollTo({
-                top: scene.offsetTop + 20,
+                top: info.offsetTop + 20,
                 behavior: prefersReducedMotion ? 'auto' : 'smooth'
             });
         });
     });
 
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
-    onScroll();
-    requestAnimationFrame(() => requestAnimationFrame(tick));
+    window.addEventListener('resize', refreshOffsets, { passive: true });
+    // refresh once fonts settle (layout shifts can move offsets)
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(refreshOffsets);
+    }
+
+    // Kick off the continuous rAF loop
+    requestAnimationFrame(loop);
 })();

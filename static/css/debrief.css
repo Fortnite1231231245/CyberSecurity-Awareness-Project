@@ -162,10 +162,10 @@ body.db-body {
 
 /* Tall spacer makes sticky work as scroll-linked animation track.
    Sticky range = height - 100vh (since stage is 100vh).
-   Kept modest so scenes don't drag. */
-.db-scene--tall  { height: 160vh; }
-.db-scene--xtall { height: 200vh; }
-.db-scene--xxtall{ height: 240vh; }
+   Generous heights so each beat can breathe. */
+.db-scene--tall  { height: 180vh; }
+.db-scene--xtall { height: 230vh; }
+.db-scene--xxtall{ height: 290vh; }
 
 /* ----- Display type ----- */
 .db-eyebrow {
@@ -298,7 +298,6 @@ body.db-body {
     border-bottom: 1px solid var(--db-line);
     align-items: center;
     position: relative;
-    transition: background 240ms ease, border-color 240ms ease;
     will-change: transform, opacity;
 }
 .db-mail-row:last-child { border-bottom: 0; }
@@ -390,6 +389,7 @@ body.db-body {
     padding: 28px;
     position: relative;
     will-change: transform, opacity;
+    transition: border-color 240ms ease, box-shadow 240ms ease;
 }
 .db-diff-card.safe   { border-color: rgba(16,185,129,0.35); box-shadow: 0 0 60px rgba(16,185,129,0.08); }
 .db-diff-card.danger { border-color: rgba(239,68,68,0.45);  box-shadow: 0 0 60px rgba(239,68,68,0.12); }
@@ -703,36 +703,66 @@ body.db-body {
     font-weight: 600;
 }
 
-/* ----- SCENE 6: psychology words ----- */
+/* ----- SCENE 6: psychology words — one-at-a-time crossfade ----- */
 .db-psych {
     width: 100%;
-    display: flex; flex-direction: column; align-items: center;
-    gap: 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(32px, 6vh, 72px);
     text-align: center;
+    padding: 0 24px;
+}
+.db-psych-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px;
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.25);
+    border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--db-danger);
+    font-weight: 500;
+    will-change: opacity, transform;
+}
+.db-psych-eyebrow .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--db-danger);
+    box-shadow: 0 0 8px var(--db-danger);
+}
+.db-psych-stack {
+    position: relative;
+    width: 100%;
+    max-width: 1200px;
+    height: clamp(120px, 22vh, 260px);
 }
 .db-psych-word {
-    font-size: clamp(52px, 11vw, 180px);
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: clamp(56px, 13vw, 210px);
     line-height: 0.92;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.045em;
     font-weight: 800;
-    color: var(--db-ink-faint);
-    transition: color 400ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
-    will-change: transform, color;
-}
-.db-psych-word.active {
     color: var(--db-ink);
-    transform: scale(1.02);
+    white-space: nowrap;
+    will-change: opacity, transform;
+    opacity: 0;
 }
-.db-psych-word.active.hot {
+.db-psych-word.hot {
     color: var(--db-danger);
-    text-shadow: 0 0 32px rgba(239,68,68,0.35);
+    text-shadow: 0 0 60px rgba(239,68,68,0.35);
 }
 .db-psych-caption {
     font-size: clamp(14px, 1.4vw, 18px);
     color: var(--db-ink-mute);
-    max-width: 520px;
-    position: absolute;
-    bottom: 12vh; left: 50%; transform: translateX(-50%);
+    max-width: 560px;
+    line-height: 1.55;
+    margin: 0;
+    will-change: opacity, transform;
 }
 
 /* ----- SCENE 7: missed signs ----- */
@@ -752,7 +782,7 @@ body.db-body {
     position: relative;
     overflow: hidden;
     will-change: transform, opacity;
-    transition: border-color 240ms, transform 240ms;
+    transition: border-color 240ms ease;
 }
 .db-sign::before {
     content: '';
@@ -808,7 +838,7 @@ body.db-body {
     border: 1px solid var(--db-line);
     border-radius: 12px;
     background: rgba(255,255,255,0.015);
-    transition: background 240ms, border-color 240ms, transform 240ms;
+    transition: background 240ms ease, border-color 240ms ease;
     will-change: opacity, transform;
 }
 .db-rule:hover { background: rgba(59,130,246,0.04); border-color: rgba(59,130,246,0.3); }
