@@ -327,13 +327,12 @@
             heading.style.transform = `translate3d(0, ${lerp(20, 0, enter) + parallax * 0.5}px, 0)`;
         }
 
-        // Popups reveal in sequence so the user continuously sees new scams
-        // land. All four settle by p ≈ 0.5 — leaving half the sticky phase
-        // for the user to dwell on the full swarm.
+        // Popups reveal in sequence, starting in pre-entry (negative p) so the
+        // fly-ins read early — all four settled well before mid sticky phase.
         const popN = popups.length;
         popups.forEach((pop, i) => {
-            const start = -0.25 + (i / popN) * 0.55;   // 0:-0.25, 3:0.16
-            const end = start + 0.3;                    // 3 finishes at 0.46
+            const start = -0.58 + (i / popN) * 0.42;   // 0:-0.58 … 3:-0.26
+            const end = start + 0.26;                   // last finishes ~0
             const r = range(p, start, end);
             const baseX = parseFloat(pop.dataset.x || 0);
             const baseY = parseFloat(pop.dataset.y || 0);
