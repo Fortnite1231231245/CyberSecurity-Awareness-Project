@@ -328,12 +328,12 @@
         }
 
         // Popups reveal in sequence so the user continuously sees new scams
-        // land. All four settle by p ~= 0.6, leaving ~40% of sticky for the
-        // user to read the full swarm before moving on.
+        // land. All four settle by p ≈ 0.5 — leaving half the sticky phase
+        // for the user to dwell on the full swarm.
         const popN = popups.length;
         popups.forEach((pop, i) => {
-            const start = -0.2 + (i / popN) * 0.6;    // 0:-0.2, 3:0.25
-            const end = start + 0.3;                   // 3 finishes at 0.55
+            const start = -0.25 + (i / popN) * 0.55;   // 0:-0.25, 3:0.16
+            const end = start + 0.3;                    // 3 finishes at 0.46
             const r = range(p, start, end);
             const baseX = parseFloat(pop.dataset.x || 0);
             const baseY = parseFloat(pop.dataset.y || 0);

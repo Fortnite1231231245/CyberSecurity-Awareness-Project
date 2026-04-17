@@ -17,6 +17,27 @@ from functools import wraps
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or os.environ.get('FLASK_SECRET_KEY') or 'dev-insecure-change-me'
 
+# Force browsers to re-validate static files quickly so fresh deploys of
+# debrief.css / debrief.js are picked up instead of cached indefinitely.
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
+# Per-deploy cache-bust tag. On Vercel this is the git commit SHA (unique per
+# deploy). On local dev it's a module-load timestamp (changes on server restart).
+import time as _time
+_STATIC_V = (os.environ.get('VERCEL_GIT_COMMIT_SHA') or '')[:10] or str(int(_time.time()))
+
+@app.context_processor
+def _inject_static_v():
+    return {'static_v': _STATIC_V}
+
+@app.after_request
+def _static_cache_headers(response):
+    # Short max-age + must-revalidate so edge/browser caches re-check quickly.
+    # Combined with ?v= query-string bust, each deploy gets fresh assets.
+    if request.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'public, max-age=60, must-revalidate'
+    return response
+
 def _db_url():
     url = (
         os.environ.get('DATABASE_URL')
