@@ -327,12 +327,12 @@
             heading.style.transform = `translate3d(0, ${lerp(20, 0, enter) + parallax * 0.5}px, 0)`;
         }
 
-        // Popups reveal in sequence, starting in pre-entry (negative p) so the
-        // fly-ins read early — all four settled well before mid sticky phase.
+        // Popups reveal in sequence — starts deep in pre-entry so fly-ins read
+        // very early; stagger kept tight so all four land before p ≈ -0.1.
         const popN = popups.length;
         popups.forEach((pop, i) => {
-            const start = -0.58 + (i / popN) * 0.42;   // 0:-0.58 … 3:-0.26
-            const end = start + 0.26;                   // last finishes ~0
+            const start = -0.82 + (i / popN) * 0.36;   // 0:-0.82 … 3:-0.55
+            const end = start + 0.22;                   // last finishes ~-0.33
             const r = range(p, start, end);
             const baseX = parseFloat(pop.dataset.x || 0);
             const baseY = parseFloat(pop.dataset.y || 0);
@@ -347,32 +347,32 @@
     }
 
     function handlePsych(scene, p) {
-        // Vertical list — each word is in normal document flow and animates
-        // independently. No overlapping absolute layers, no crossfade races.
+        // Vertical list — lever words animate in during pre-entry (negative p)
+        // so the big titles read while the scene is still approaching, not after
+        // the stage locks to the viewport.
         const words = Array.from(scene.querySelectorAll('.db-psych-word'));
         const caption = scene.querySelector('.db-psych-caption');
         const eyebrow = scene.querySelector('.db-psych-eyebrow');
         const n = words.length;
 
-        const framing = range(p, -0.7, -0.1);
+        const framing = range(p, -0.88, -0.2);
         if (eyebrow) {
             eyebrow.style.opacity = framing;
             eyebrow.style.transform = `translate3d(0, ${lerp(12, 0, framing)}px, 0)`;
         }
 
-        // Each word: fade + subtle rise as user scrolls through its slot.
-        // Spread across the sticky phase so scrolling continuously reveals.
+        // Stagger across strong pre-entry; all words fully visible before p ≈ 0.
         words.forEach((w, i) => {
-            const start = -0.1 + (i / n) * 0.65;   // word 0: -0.1, word 4: 0.42
-            const end = start + 0.25;
+            const start = -0.9 + (i / n) * 0.48;   // 0:-0.90 … 4:-0.52
+            const end = start + 0.2;
             const vis = range(p, start, end);
             w.style.opacity = vis;
             w.style.transform = `translate3d(0, ${lerp(28, 0, vis)}px, 0)`;
         });
 
-        // Caption lands after all words are up — a summary
+        // Caption after lever words — early sticky / late pre-entry
         if (caption) {
-            const capR = range(p, 0.6, 0.85);
+            const capR = range(p, -0.15, 0.35);
             caption.style.opacity = capR;
             caption.style.transform = `translate3d(0, ${lerp(16, 0, capR)}px, 0)`;
         }
