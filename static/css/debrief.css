@@ -162,10 +162,10 @@ body.db-body {
 
 /* Tall spacer makes sticky work as scroll-linked animation track.
    Sticky range = height - 100vh (since stage is 100vh).
-   Generous heights so each beat can breathe. */
-.db-scene--tall  { height: 180vh; }
-.db-scene--xtall { height: 230vh; }
-.db-scene--xxtall{ height: 290vh; }
+   Extra-generous heights so each beat lingers and the total page pace is unhurried. */
+.db-scene--tall  { height: 260vh; }
+.db-scene--xtall { height: 330vh; }
+.db-scene--xxtall{ height: 420vh; }
 
 /* ----- Display type ----- */
 .db-eyebrow {
