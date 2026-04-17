@@ -245,6 +245,11 @@ def start_game_action():
     session['game_started'] = True
     return jsonify({'status': 'ok'})
 
+@app.route('/debrief')
+def debrief():
+    """Cinematic scroll-driven storytelling debrief of the phishing simulation."""
+    return render_template('debrief.html')
+
 @app.route('/credits')
 def credits():
     """Team credits page"""

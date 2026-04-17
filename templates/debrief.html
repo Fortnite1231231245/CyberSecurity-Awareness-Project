@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Debrief — What actually happened</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/debrief.css') }}">
+</head>
+<body class="db-body">
+<div class="db">
+
+    <!-- Ambient layers -->
+    <div class="db-bg-grid"></div>
+    <div class="db-bg-glow"></div>
+    <div class="db-bg-noise"></div>
+    <div class="db-glitch"></div>
+
+    <!-- Top progress bar -->
+    <div class="db-progress"><div class="db-progress-fill"></div></div>
+
+    <!-- Floating nav -->
+    <div class="db-nav">
+        <span class="db-nav-brand"><span class="dot"></span> Debrief</span>
+        <a href="{{ url_for('start') }}" class="db-nav-exit">
+            Exit
+            <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </a>
+    </div>
+
+    <!-- Side scene dots -->
+    <nav class="db-dots" aria-label="Jump to scene">
+        <button class="db-dot" aria-label="Intro"></button>
+        <button class="db-dot" aria-label="Inbox"></button>
+        <button class="db-dot" aria-label="Two domains"></button>
+        <button class="db-dot" aria-label="The link"></button>
+        <button class="db-dot" aria-label="Fake site"></button>
+        <button class="db-dot" aria-label="Popups"></button>
+        <button class="db-dot" aria-label="Psychology"></button>
+        <button class="db-dot" aria-label="Missed signs"></button>
+        <button class="db-dot" aria-label="Playbook"></button>
+        <button class="db-dot" aria-label="Try again"></button>
+    </nav>
+
+    <!-- =============== SCENE 0 — INTRO =============== -->
+    <section class="db-scene db-scene--tall" data-scene="intro">
+        <div class="db-scene-stage">
+            <div class="db-scene-inner db-intro">
+                <span class="db-eyebrow"><span class="dot"></span> Post-mission debrief</span>
+                <h1 class="db-display">
+                    <span class="line">What actually</span>
+                    <span class="line"><span class="accent">happened.</span></span>
+                </h1>
+                <p class="db-intro-sub">A reconstruction of the attack you just walked through. No jargon. Scroll to relive it.</p>
+                <div class="db-scroll-hint">
+                    Scroll to begin
+                    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =============== SCENE 1 — INBOX =============== -->
+    <section class="db-scene db-scene--xxtall" data-scene="inbox">
+        <div class="db-scene-stage">
+
+            <div class="db-scene-heading">
+                <span class="db-eyebrow"><span class="dot"></span> Scene 01 · The inbox</span>
+                <h2 class="db-h2">Ten emails.<br><span style="color:var(--db-ink-faint)">One is real.</span></h2>
+            </div>
+
+            <div class="db-scene-inner" style="align-items: end; padding-bottom: 12vh;">
+                <div class="db-inbox">
+                    <div class="db-inbox-window">
+                        <div class="db-inbox-chrome">
+                            <span class="tl" style="background:#3A3A40"></span>
+                            <span class="tl" style="background:#3A3A40"></span>
+                            <span class="tl" style="background:#3A3A40"></span>
+                            <span class="title db-mono">inbox — simon.benson@me.com</span>
+                        </div>
+                        <div class="db-inbox-rows">
+                            <div class="db-mail-row safe">
+                                <div class="db-mail-sender">
+                                    <span class="db-mail-sender-name">Bank of Secure Support</span>
+                                    <span class="db-mail-sender-addr">support@bankofsecure.com</span>
+                                </div>
+                                <div class="db-mail-subject">Password Reset Instructions</div>
+                                <div class="db-mail-date">Jan 20</div>
+                            </div>
+                            <div class="db-mail-row danger">
+                                <div class="db-mail-sender">
+                                    <span class="db-mail-sender-name">Bank of Secure Alerts</span>
+                                    <span class="db-mail-sender-addr">support@bankofsec<span style="color:var(--db-danger)">uu</span>re.com</span>
+                                </div>
+                                <div class="db-mail-subject">ACT NOW: Account Access Issue!</div>
+                                <div class="db-mail-date">Jan 20</div>
+                            </div>
+                            <div class="db-mail-row danger">
+                                <div class="db-mail-sender">
+                                    <span class="db-mail-sender-name">Security Team</span>
+                                    <span class="db-mail-sender-addr">alerts@bank-secure.com</span>
+                                </div>
+                                <div class="db-mail-subject">Security Alert — Verify Now</div>
+                                <div class="db-mail-date">Jan 19</div>
+                            </div>
+                            <div class="db-mail-row danger">
+                                <div class="db-mail-sender">
+                                    <span class="db-mail-sender-name">Bank of Secure</span>
+                                    <span class="db-mail-sender-addr">bankofsecure@<span style="color:var(--db-danger)">gmail.com</span></span>
+                                </div>
+                                <div class="db-mail-subject">Simon, Immediate Assistance Required</div>
+                                <div class="db-mail-date">Jan 19</div>
+                            </div>
+                            <div class="db-mail-row danger">
+                                <div class="db-mail-sender">
+                                    <span class="db-mail-sender-name">BankofSecure Support</span>
+                                    <span class="db-mail-sender-addr">noreply@bank<span style="color:var(--db-danger)">0</span>fsecure.com</span>
+                                </div>
+                                <div class="db-mail-subject">Your Account Has Been Limited</div>
+                                <div class="db-mail-date">Jan 18</div>
+                            </div>
+                            <div class="db-mail-row danger">
+                                <div class="db-mail-sender">
+                                    <span class="db-mail-sender-name">Online Banking</span>
+                                    <span class="db-mail-sender-addr">secure@bankofsecure<span style="color:var(--db-danger)">.net</span></span>
+                                </div>
+                                <div class="db-mail-subject">Confirm Your Recent Transaction</div>
+                                <div class="db-mail-date">Jan 18</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="db-annot" style="top: 6%; left: -10%;">Typo in the domain</div>
+                    <div class="db-annot" style="top: 30%; right: -8%;">Free email service</div>
+                    <div class="db-annot" style="top: 54%; left: -14%;">Zero disguised as "o"</div>
+                    <div class="db-annot ok" style="top: -8%; left: 8%;">The only real one</div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- =============== SCENE 2 — DOMAIN DIFF =============== -->
+    <section class="db-scene db-scene--tall" data-scene="diff">
+        <div class="db-scene-stage">
+
+            <div class="db-scene-heading">
+                <span class="db-eyebrow db-eyebrow--warn"><span class="dot"></span> Scene 02 · The difference</span>
+                <h2 class="db-h2">One letter.<br><span style="color:var(--db-ink-faint)">That was the whole attack.</span></h2>
+            </div>
+
+            <div class="db-scene-inner">
+                <div class="db-diff">
+                    <div class="db-diff-card safe">
+                        <div class="db-diff-card-label">Real sender</div>
+                        <div class="db-diff-domain">support@bankofsec<span class="ok">u</span>re.com</div>
+                        <div class="db-diff-check">
+                            <svg viewBox="0 0 24 24" stroke="currentColor" style="color:var(--db-ok)"><path d="M20 6L9 17l-5-5"/></svg>
+                            Official domain, matches exactly
+                        </div>
+                    </div>
+                    <div class="db-diff-vs">VS</div>
+                    <div class="db-diff-card danger">
+                        <div class="db-diff-card-label">Spoofed sender</div>
+                        <div class="db-diff-domain">support@bankofsec<span class="hl">uu</span>re.com</div>
+                        <div class="db-diff-check">
+                            <svg viewBox="0 0 24 24" stroke="currentColor" style="color:var(--db-danger)"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                            Double "u" — a domain the attacker registered
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- =============== SCENE 3 — THE LINK =============== -->
+    <section class="db-scene db-scene--xtall" data-scene="link">
+        <div class="db-scene-stage">
+
+            <div class="db-scene-heading">
+                <span class="db-eyebrow db-eyebrow--danger"><span class="dot"></span> Scene 03 · The click</span>
+                <h2 class="db-h2">What you see<br><span style="color:var(--db-ink-faint)">isn't where it goes.</span></h2>
+            </div>
+
+            <div class="db-scene-inner">
+                <div class="db-link-stage">
+                    <div class="db-link-preview">
+                        <div class="db-link-preview-label">Email body</div>
+                        <div>
+                            Reset your password here:
+                            <span class="db-link-displayed">https://www.bankofsecure.com/reset</span>
+                        </div>
+                        <svg class="db-cursor" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M5 3l15 7-7 2-2 7-6-16z"/>
+                        </svg>
+                    </div>
+                    <div class="db-link-actual-wrap">
+                        <div class="db-link-arrow"></div>
+                        <div class="db-link-actual-label">Real destination</div>
+                        <div class="db-link-actual db-mono">http://bankofsec<span style="text-decoration:underline">vr</span>e.com/harvest</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- =============== SCENE 4 — FAKE SITE =============== -->
+    <section class="db-scene db-scene--tall" data-scene="browser">
+        <div class="db-scene-stage">
+
+            <div class="db-scene-heading">
+                <span class="db-eyebrow db-eyebrow--danger"><span class="dot"></span> Scene 04 · The fake site</span>
+                <h2 class="db-h2">The page looks real.<br><span style="color:var(--db-ink-faint)">The URL is the only tell.</span></h2>
+            </div>
+
+            <div class="db-scene-inner">
+                <div class="db-browser">
+                    <div class="db-browser-callout">Look at the address bar</div>
+                    <div class="db-browser-chrome">
+                        <div class="db-browser-dots"><span></span><span></span><span></span></div>
+                        <div class="db-browser-addr">
+                            <span class="lock"><svg viewBox="0 0 24 24"><path d="M3 12L21 12M7 9V7a5 5 0 0110 0v2"/><rect x="5" y="9" width="14" height="12" rx="2"/></svg></span>
+                            <span>
+                                <span class="url-http">http://</span><span class="url-bad">bankofsec<span class="hl">vr</span>e.com/login</span>
+                            </span>
+                            <span class="db-browser-addr-pulse"></span>
+                        </div>
+                    </div>
+                    <div class="db-browser-page">
+                        <div class="db-fake-form">
+                            <div class="db-fake-form-title">Bank of Secure</div>
+                            <div class="db-fake-input">Username</div>
+                            <div class="db-fake-input">Password</div>
+                            <div class="db-fake-btn">Sign in</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- =============== SCENE 5 — POPUP SWARM =============== -->
+    <section class="db-scene db-scene--xtall" data-scene="popups">
+        <div class="db-scene-stage">
+
+            <div class="db-scene-heading">
+                <span class="db-eyebrow db-eyebrow--warn"><span class="dot"></span> Scene 05 · The swarm</span>
+                <h2 class="db-h2">Then the noise<br><span style="color:var(--db-ink-faint)">started.</span></h2>
+            </div>
+
+            <div class="db-scene-inner">
+                <div class="db-popups">
+                    <div class="db-popup lottery"
+                         data-x="-360" data-y="-180" data-r="-3"
+                         data-from-x="-900" data-from-y="-400">
+                        <span class="db-popup-tag">Greed bait</span>
+                        <div class="db-popup-label">🎉 Jackpot</div>
+                        <div class="db-popup-title">You won $1,000,000</div>
+                        <div class="db-popup-body">Claim your prize by paying a $49 processing fee today.</div>
+                        <span class="db-popup-btn">Claim prize</span>
+                    </div>
+
+                    <div class="db-popup verify"
+                         data-x="40" data-y="-220" data-r="2"
+                         data-from-x="900" data-from-y="-400">
+                        <span class="db-popup-tag">Data harvest</span>
+                        <div class="db-popup-label">Verify Identity</div>
+                        <div class="db-popup-title">Unusual activity detected</div>
+                        <div class="db-popup-body">Enter your full SSN and card number to re-verify your account.</div>
+                        <span class="db-popup-btn">Verify now</span>
+                    </div>
+
+                    <div class="db-popup twofa"
+                         data-x="-280" data-y="40" data-r="3"
+                         data-from-x="-900" data-from-y="400">
+                        <span class="db-popup-tag">Fake authority</span>
+                        <div class="db-popup-label">Security</div>
+                        <div class="db-popup-title">Re-authenticate with 2FA</div>
+                        <div class="db-popup-body">Enter your phone number and the code we will send you.</div>
+                        <span class="db-popup-btn">Authenticate</span>
+                    </div>
+
+                    <div class="db-popup timeout"
+                         data-x="120" data-y="80" data-r="-2"
+                         data-from-x="900" data-from-y="400">
+                        <span class="db-popup-tag">Urgency</span>
+                        <div class="db-popup-label">Session expiring</div>
+                        <div class="db-popup-title">Re-enter password — 00:08</div>
+                        <div class="db-popup-body">Your session expires soon. Enter your password to stay logged in.</div>
+                        <span class="db-popup-btn">Stay signed in</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- =============== SCENE 6 — PSYCHOLOGY =============== -->
+    <section class="db-scene db-scene--xxtall" data-scene="psych">
+        <div class="db-scene-stage" style="background:linear-gradient(180deg, transparent, rgba(239,68,68,0.03), transparent);">
+
+            <div class="db-scene-inner db-psych">
+                <div class="db-psych-word">URGENCY</div>
+                <div class="db-psych-word hot">FEAR</div>
+                <div class="db-psych-word">AUTHORITY</div>
+                <div class="db-psych-word hot">FAMILIARITY</div>
+                <div class="db-psych-word">GREED</div>
+                <div class="db-psych-caption">Every attack pulls one of these levers. The popup, the countdown, the "grandma" text — all of it is engineered to bypass the part of your brain that checks.</div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- =============== SCENE 7 — MISSED SIGNS =============== -->
+    <section class="db-scene db-scene--xtall" data-scene="signs">
+        <div class="db-scene-stage">
+
+            <div class="db-scene-heading">
+                <span class="db-eyebrow db-eyebrow--danger"><span class="dot"></span> Scene 06 · The signs</span>
+                <h2 class="db-h2">Things you missed.</h2>
+            </div>
+
+            <div class="db-scene-inner" style="align-items: end; padding-bottom: 10vh;">
+                <div class="db-signs">
+                    <div class="db-sign">
+                        <span class="db-sign-tag">Sender</span>
+                        <span class="db-sign-number">01</span>
+                        <h3 class="db-sign-title">The domain had a typo</h3>
+                        <p class="db-sign-body">"bankofsec<span class="db-mono" style="color:var(--db-danger)">uu</span>re.com" with a double-U. Registered by an attacker to catch fast readers.</p>
+                    </div>
+                    <div class="db-sign">
+                        <span class="db-sign-tag">Transport</span>
+                        <span class="db-sign-number">02</span>
+                        <h3 class="db-sign-title">The URL was HTTP, not HTTPS</h3>
+                        <p class="db-sign-body">No padlock, no TLS. Real banks redirect you to HTTPS the moment you touch login. A raw http:// at a bank URL is a dead giveaway.</p>
+                    </div>
+                    <div class="db-sign">
+                        <span class="db-sign-tag">UI</span>
+                        <span class="db-sign-number">03</span>
+                        <h3 class="db-sign-title">A popup asked for your password</h3>
+                        <p class="db-sign-body">Real sessions don't expire inside a popup. When your session ends, the bank sends you to the login page — not an overlay with a countdown.</p>
+                    </div>
+                    <div class="db-sign">
+                        <span class="db-sign-tag">Timing</span>
+                        <span class="db-sign-number">04</span>
+                        <h3 class="db-sign-title">Everything was urgent</h3>
+                        <p class="db-sign-body">"ACT NOW". "08 seconds". "Immediate verification". Urgency is the single most reliable signal of an attack — it's designed to skip your judgment.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- =============== SCENE 8 — PLAYBOOK =============== -->
+    <section class="db-scene db-scene--xtall" data-scene="playbook">
+        <div class="db-scene-stage">
+
+            <div class="db-scene-heading">
+                <span class="db-eyebrow"><span class="dot"></span> Scene 07 · Next time</span>
+                <h2 class="db-h2">What to do<br><span style="color:var(--db-ink-faint)">instead.</span></h2>
+            </div>
+
+            <div class="db-scene-inner" style="align-items: end; padding-bottom: 12vh;">
+                <div class="db-playbook">
+                    <div class="db-rule">
+                        <div class="db-rule-num">01</div>
+                        <div class="db-rule-text">
+                            <span class="db-rule-title">Read the sender, not the brand</span>
+                            <span class="db-rule-sub">The display name means nothing. The @ domain is the only part that's verifiable.</span>
+                        </div>
+                        <div class="db-rule-arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></div>
+                    </div>
+                    <div class="db-rule">
+                        <div class="db-rule-num">02</div>
+                        <div class="db-rule-text">
+                            <span class="db-rule-title">Check the URL before you type</span>
+                            <span class="db-rule-sub">Read every character, left to right. A lookalike letter or extra hyphen is the attacker's signature.</span>
+                        </div>
+                        <div class="db-rule-arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></div>
+                    </div>
+                    <div class="db-rule">
+                        <div class="db-rule-num">03</div>
+                        <div class="db-rule-text">
+                            <span class="db-rule-title">Never trust a popup with your data</span>
+                            <span class="db-rule-sub">If an overlay asks for SSN, password, or a 2FA code — close the tab. Go to the site directly.</span>
+                        </div>
+                        <div class="db-rule-arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></div>
+                    </div>
+                    <div class="db-rule">
+                        <div class="db-rule-num">04</div>
+                        <div class="db-rule-text">
+                            <span class="db-rule-title">When it feels urgent, slow down</span>
+                            <span class="db-rule-sub">Urgency is the lure. Any message that won't survive five seconds of calm review is almost certainly an attack.</span>
+                        </div>
+                        <div class="db-rule-arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- =============== SCENE 9 — CTA =============== -->
+    <section class="db-scene db-scene--tall" data-scene="cta">
+        <div class="db-scene-stage">
+            <div class="db-scene-inner db-cta">
+                <h2 class="db-cta-display"><span class="flicker">Ready?</span></h2>
+                <p class="db-cta-sub">Run it again. This time you'll see it coming.</p>
+                <div class="db-cta-actions">
+                    <a href="{{ url_for('new_game') }}" class="db-btn db-btn-primary">
+                        Try the simulation again
+                        <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                    </a>
+                    <a href="{{ url_for('start') }}" class="db-btn db-btn-ghost">Back to home</a>
+                </div>
+                <div class="db-cta-footnote">END OF DEBRIEF · STAY SHARP</div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<script src="{{ url_for('static', filename='debrief.js') }}"></script>
+</body>
+</html>
